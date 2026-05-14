@@ -24,3 +24,8 @@ logs
 !.env.example
 
 /generated/prisma
+
+问答.md
+总结.md
+Prisma初始化.md
+Nuxt项目的api模块组织.md

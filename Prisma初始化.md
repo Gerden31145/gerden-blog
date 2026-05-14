@@ -636,3 +636,898 @@ Nuxt 中 Prisma 只能放在 server 层，不能直接放到 Vue 页面组件里
 ```
 
 你现在这个博客项目属于第二种：**已有数据库、已有表，所以先 `db pull`，再 `generate`。**
+
+# 如何写Nuxt接口
+
+写 Nuxt 接口时，Prisma 最常用的语法可以先记成一个固定模板：
+
+```
+await prisma.模型名.操作方法({
+  where: {},
+  select: {},
+  include: {},
+  orderBy: {},
+  skip: 0,
+  take: 10,
+  data: {}
+})
+```
+
+比如你的数据库里有 `posts` 表，Prisma introspect 后如果生成的是：
+
+```
+model posts {
+  id      Int    @id @default(autoincrement())
+  title   String
+  content String
+}
+```
+
+那么调用就是：
+
+```
+prisma.posts.findMany()
+```
+
+如果模型叫：
+
+```
+model Post {
+  id      Int    @id @default(autoincrement())
+  title   String
+}
+```
+
+那么调用就是：
+
+```
+prisma.post.findMany()
+```
+
+Prisma Client 是根据 `schema.prisma` 自动生成的类型安全查询客户端，所以模型名、字段名都会来自你的 schema。修改 schema 后通常需要重新执行 `npx prisma generate`。Prisma 官方文档也把 Prisma Client 定义为基于 Prisma Schema 自动生成、类型安全的 query builder。([Prisma](https://www.prisma.io/docs/orm/prisma-client?utm_source=chatgpt.com))
+
+------
+
+最核心的 CRUD 是这几个：
+
+```
+prisma.posts.findMany()     // 查询多条
+prisma.posts.findUnique()   // 根据唯一字段查一条
+prisma.posts.findFirst()    // 按条件查第一条
+prisma.posts.create()       // 新增
+prisma.posts.update()       // 修改
+prisma.posts.delete()       // 删除
+prisma.posts.count()        // 统计数量
+```
+
+Prisma 官方 CRUD 文档也是围绕 Create、Read、Update、Delete 这些操作展开的。([Prisma](https://www.prisma.io/docs/orm/prisma-client/queries/filtering-and-sorting?utm_source=chatgpt.com))
+
+------
+
+## 1. 查询文章列表：`findMany`
+
+最简单：
+
+```
+const posts = await prisma.posts.findMany()
+```
+
+常见写法：
+
+```
+const posts = await prisma.posts.findMany({
+  orderBy: {
+    created_at: 'desc'
+  }
+})
+```
+
+意思是：
+
+```
+查 posts 表的多条数据，并按 created_at 倒序排列
+```
+
+在 Nuxt 接口里可以这样写：
+
+```
+// server/api/posts/index.get.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async () => {
+  const posts = await prisma.posts.findMany({
+    orderBy: {
+      created_at: 'desc'
+    }
+  })
+
+  return posts
+})
+```
+
+------
+
+## 2. 查询单篇文章：`findUnique`
+
+如果根据 `id` 查文章：
+
+```
+const post = await prisma.posts.findUnique({
+  where: {
+    id: 1
+  }
+})
+```
+
+注意：`findUnique` 的 `where` 里面必须是唯一字段，比如 `id`、`slug`，或者你在 Prisma 里标了 `@unique` 的字段。
+
+比如你的文章 slug 是唯一的：
+
+```
+const post = await prisma.posts.findUnique({
+  where: {
+    slug: 'vue3-prisma-blog'
+  }
+})
+```
+
+放到 Nuxt 动态接口里：
+
+```
+// server/api/posts/[id].get.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const id = Number(getRouterParam(event, 'id'))
+
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '文章 id 不合法'
+    })
+  }
+
+  const post = await prisma.posts.findUnique({
+    where: {
+      id
+    }
+  })
+
+  if (!post) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: '文章不存在'
+    })
+  }
+
+  return post
+})
+```
+
+------
+
+## 3. 条件查询：`where`
+
+`where` 就相当于 SQL 里的 `WHERE`。
+
+比如查已发布文章：
+
+```
+const posts = await prisma.posts.findMany({
+  where: {
+    post_status: 'published'
+  }
+})
+```
+
+模糊搜索标题：
+
+```
+const posts = await prisma.posts.findMany({
+  where: {
+    title: {
+      contains: 'Vue'
+    }
+  }
+})
+```
+
+多个条件：
+
+```
+const posts = await prisma.posts.findMany({
+  where: {
+    post_status: 'published',
+    title: {
+      contains: 'Vue'
+    }
+  }
+})
+```
+
+这相当于：
+
+```
+WHERE post_status = 'published'
+AND title LIKE '%Vue%'
+```
+
+Prisma 的过滤和排序主要就是通过 `where`、`orderBy` 这些字段完成的，也支持组合条件和关系过滤。([Prisma](https://www.prisma.io/docs/orm/prisma-client/queries/filtering-and-sorting?utm_source=chatgpt.com))
+
+------
+
+## 4. 只返回部分字段：`select`
+
+默认情况下，Prisma 会返回整条记录。接口开发时，经常不想把所有字段都返回给前端，比如文章列表不需要 `content` 全文。
+
+```
+const posts = await prisma.posts.findMany({
+  select: {
+    id: true,
+    title: true,
+    slug: true,
+    summary: true,
+    created_at: true
+  }
+})
+```
+
+返回结果里就只有这些字段。
+
+这个在博客列表接口里很常用：
+
+```
+// server/api/posts/index.get.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async () => {
+  const posts = await prisma.posts.findMany({
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      summary: true,
+      cover_image: true,
+      published_at: true
+    },
+    where: {
+      post_status: 'published'
+    },
+    orderBy: {
+      published_at: 'desc'
+    }
+  })
+
+  return posts
+})
+```
+
+这比直接返回 `content` 更合理，因为文章正文可能很大。
+
+------
+
+## 5. 排序：`orderBy`
+
+按创建时间倒序：
+
+```
+const posts = await prisma.posts.findMany({
+  orderBy: {
+    created_at: 'desc'
+  }
+})
+```
+
+按浏览量倒序：
+
+```
+const posts = await prisma.posts.findMany({
+  orderBy: {
+    view_count: 'desc'
+  }
+})
+```
+
+多个排序条件：
+
+```
+const posts = await prisma.posts.findMany({
+  orderBy: [
+    {
+      post_status: 'asc'
+    },
+    {
+      created_at: 'desc'
+    }
+  ]
+})
+```
+
+------
+
+## 6. 分页：`skip` 和 `take`
+
+这是接口里非常常用的。
+
+```
+const posts = await prisma.posts.findMany({
+  skip: 0,
+  take: 10
+})
+```
+
+意思是：
+
+```
+跳过 0 条，取 10 条
+```
+
+如果前端传：
+
+```
+/api/posts?page=2&pageSize=10
+```
+
+接口可以这样写：
+
+```
+// server/api/posts/index.get.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const query = getQuery(event)
+
+  const page = Number(query.page || 1)
+  const pageSize = Number(query.pageSize || 10)
+
+  const posts = await prisma.posts.findMany({
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    orderBy: {
+      created_at: 'desc'
+    }
+  })
+
+  const total = await prisma.posts.count()
+
+  return {
+    page,
+    pageSize,
+    total,
+    list: posts
+  }
+})
+```
+
+Prisma 分页常用两类方式：一种是 `skip` / `take` 这种 offset pagination，另一种是基于 cursor 的分页。普通博客后台、文章列表先用 `skip` / `take` 就够了。([Prisma](https://www.prisma.io/docs/orm/prisma-client/queries/pagination?utm_source=chatgpt.com))
+
+------
+
+## 7. 新增数据：`create`
+
+创建文章：
+
+```
+const post = await prisma.posts.create({
+  data: {
+    title: '我的第一篇文章',
+    slug: 'my-first-post',
+    summary: '文章摘要',
+    content: '文章正文',
+    post_status: 'draft'
+  }
+})
+```
+
+放到 Nuxt POST 接口里：
+
+```
+// server/api/posts/index.post.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+
+  if (!body.title || !body.content) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '标题和内容不能为空'
+    })
+  }
+
+  const post = await prisma.posts.create({
+    data: {
+      title: body.title,
+      slug: body.slug,
+      summary: body.summary,
+      content: body.content,
+      post_status: body.post_status || 'draft',
+      cover_image: body.cover_image || null
+    }
+  })
+
+  return post
+})
+```
+
+`data` 就是要插入数据库的数据。
+
+你可以把它类比成 SQL：
+
+```
+INSERT INTO posts (title, slug, summary, content)
+VALUES (...)
+```
+
+------
+
+## 8. 修改数据：`update`
+
+根据 `id` 修改文章：
+
+```
+const post = await prisma.posts.update({
+  where: {
+    id: 1
+  },
+  data: {
+    title: '新的标题',
+    content: '新的内容'
+  }
+})
+```
+
+放到接口里：
+
+```
+// server/api/posts/[id].put.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const id = Number(getRouterParam(event, 'id'))
+  const body = await readBody(event)
+
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '文章 id 不合法'
+    })
+  }
+
+  const post = await prisma.posts.update({
+    where: {
+      id
+    },
+    data: {
+      title: body.title,
+      slug: body.slug,
+      summary: body.summary,
+      content: body.content,
+      post_status: body.post_status,
+      cover_image: body.cover_image
+    }
+  })
+
+  return post
+})
+```
+
+注意，`update` 的 `where` 也必须是唯一字段。
+
+------
+
+## 9. 删除数据：`delete`
+
+根据 `id` 删除文章：
+
+```
+await prisma.posts.delete({
+  where: {
+    id: 1
+  }
+})
+```
+
+接口：
+
+```
+// server/api/posts/[id].delete.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const id = Number(getRouterParam(event, 'id'))
+
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '文章 id 不合法'
+    })
+  }
+
+  await prisma.posts.delete({
+    where: {
+      id
+    }
+  })
+
+  return {
+    message: '删除成功'
+  }
+})
+```
+
+------
+
+## 10. 批量操作：`createMany`、`updateMany`、`deleteMany`
+
+批量插入：
+
+```
+await prisma.tags.createMany({
+  data: [
+    {
+      name: 'Vue',
+      slug: 'vue'
+    },
+    {
+      name: 'Nuxt',
+      slug: 'nuxt'
+    }
+  ]
+})
+```
+
+批量修改：
+
+```
+await prisma.posts.updateMany({
+  where: {
+    post_status: 'draft'
+  },
+  data: {
+    post_status: 'published'
+  }
+})
+```
+
+批量删除：
+
+```
+await prisma.posts.deleteMany({
+  where: {
+    post_status: 'draft'
+  }
+})
+```
+
+注意，`updateMany` 和 `deleteMany` 很猛，条件写错可能会影响很多数据。真实项目里后台接口最好谨慎用。
+
+------
+
+## 11. 关联查询：`include`
+
+假设你的文章和标签有关联，Prisma schema 里如果已经有关系字段，比如：
+
+```
+model posts {
+  id        Int         @id @default(autoincrement())
+  title     String
+  post_tags post_tags[]
+}
+
+model tags {
+  id        Int         @id @default(autoincrement())
+  name      String
+  post_tags post_tags[]
+}
+
+model post_tags {
+  post_id Int
+  tags_id Int
+
+  posts posts @relation(fields: [post_id], references: [id])
+  tags  tags  @relation(fields: [tags_id], references: [id])
+}
+```
+
+那查询文章时可以带上标签关联：
+
+```
+const post = await prisma.posts.findUnique({
+  where: {
+    id: 1
+  },
+  include: {
+    post_tags: {
+      include: {
+        tags: true
+      }
+    }
+  }
+})
+```
+
+返回结构大概是：
+
+```
+{
+  id: 1,
+  title: '文章标题',
+  post_tags: [
+    {
+      post_id: 1,
+      tags_id: 2,
+      tags: {
+        id: 2,
+        name: 'Vue'
+      }
+    }
+  ]
+}
+```
+
+`include` 是用来把关联数据一起查出来的；`select` 是用来控制返回哪些字段的。Prisma 官方关系查询文档里也提到，可以用 `select` 或 `include` 返回相关联的数据，并且可以在关系字段内部继续过滤和排序。([Prisma](https://www.prisma.io/docs/orm/prisma-client/queries/relation-queries?utm_source=chatgpt.com))
+
+------
+
+## 12. 创建文章 + 创建关联表：事务 `$transaction`
+
+你的博客大概率会有这种需求：
+
+```
+创建文章
+同时给文章绑定多个标签
+```
+
+这不是一条 SQL 能简单完成的。通常要：
+
+```
+1. 插入 posts
+2. 拿到新文章 id
+3. 插入 post_tags 关联表
+```
+
+为了避免第一步成功、第三步失败导致脏数据，最好用事务。
+
+```
+const result = await prisma.$transaction(async (tx) => {
+  const post = await tx.posts.create({
+    data: {
+      title: body.title,
+      slug: body.slug,
+      summary: body.summary,
+      content: body.content,
+      post_status: body.post_status || 'draft'
+    }
+  })
+
+  await tx.post_tags.createMany({
+    data: body.tagIds.map((tagId: number) => ({
+      post_id: post.id,
+      tags_id: tagId
+    }))
+  })
+
+  return post
+})
+```
+
+完整接口：
+
+```
+// server/api/posts/index.post.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+
+  if (!body.title || !body.content) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: '标题和内容不能为空'
+    })
+  }
+
+  const post = await prisma.$transaction(async (tx) => {
+    const createdPost = await tx.posts.create({
+      data: {
+        title: body.title,
+        slug: body.slug,
+        summary: body.summary,
+        content: body.content,
+        post_status: body.post_status || 'draft',
+        cover_image: body.cover_image || null
+      }
+    })
+
+    if (Array.isArray(body.tagIds) && body.tagIds.length > 0) {
+      await tx.post_tags.createMany({
+        data: body.tagIds.map((tagId: number) => ({
+          post_id: createdPost.id,
+          tags_id: tagId
+        }))
+      })
+    }
+
+    return createdPost
+  })
+
+  return post
+})
+```
+
+Prisma 官方文档说明，事务是一组读写操作，要么整体成功，要么整体失败；Prisma 支持嵌套写入、`$transaction([])` 和交互式事务等方式。([Prisma](https://www.prisma.io/docs/orm/prisma-client/queries/transactions?utm_source=chatgpt.com))
+
+这个语法你后面一定会用到，尤其是文章、标签、分类、用户权限这种多表操作。
+
+------
+
+## 13. 常见查询组合：博客列表接口实战版
+
+这个比较接近你后面真正会写的接口：
+
+```
+// server/api/posts/index.get.ts
+
+import { prisma } from '~/server/utils/prisma'
+
+export default defineEventHandler(async (event) => {
+  const query = getQuery(event)
+
+  const page = Number(query.page || 1)
+  const pageSize = Number(query.pageSize || 10)
+  const keyword = String(query.keyword || '')
+  const status = String(query.status || 'published')
+
+  const where = {
+    post_status: status,
+    ...(keyword
+      ? {
+          title: {
+            contains: keyword
+          }
+        }
+      : {})
+  }
+
+  const [list, total] = await prisma.$transaction([
+    prisma.posts.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        cover_image: true,
+        post_status: true,
+        published_at: true,
+        created_at: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize
+    }),
+
+    prisma.posts.count({
+      where
+    })
+  ])
+
+  return {
+    page,
+    pageSize,
+    total,
+    list
+  }
+})
+```
+
+这里用到了几个关键 Prisma 语法：
+
+```
+where      // 查询条件
+select     // 返回哪些字段
+orderBy    // 排序
+skip       // 跳过多少条
+take       // 取多少条
+count      // 统计总数
+$transaction // 同时执行列表查询和总数查询
+```
+
+这基本就是后台列表接口的标准形态。
+
+------
+
+## 14. 你现在最该记住的 Prisma 参数
+
+写接口时先记这几个就够了：
+
+```
+where
+```
+
+用来写查询条件。
+
+```
+data
+```
+
+用来写新增或修改的数据。
+
+```
+select
+```
+
+控制返回哪些字段。
+
+```
+include
+```
+
+查询关联数据。
+
+```
+orderBy
+```
+
+排序。
+
+```
+skip / take
+```
+
+分页。
+
+```
+$transaction
+```
+
+事务，多表操作时用。
+
+------
+
+你可以把 Prisma API 和 SQL 粗略对应成这样：
+
+```
+prisma.posts.findMany()      ≈ SELECT * FROM posts
+where                        ≈ WHERE
+select                       ≈ SELECT id, title, ...
+orderBy                      ≈ ORDER BY
+skip / take                  ≈ OFFSET / LIMIT
+create                       ≈ INSERT
+update                       ≈ UPDATE
+delete                       ≈ DELETE
+include                      ≈ JOIN / 关联查询
+$transaction                 ≈ BEGIN / COMMIT / ROLLBACK
+```
+
+目前你写 Nuxt 博客接口，先重点掌握：
+
+```
+findMany()
+findUnique()
+create()
+update()
+delete()
+count()
+where
+data
+select
+include
+orderBy
+skip
+take
+$transaction()
+```
+
+这一套就够你完成文章 CRUD、标签 CRUD、文章分页、文章搜索、文章详情、后台管理面板的大部分接口了。

@@ -1,15 +1,24 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "@prisma/client/extension";
+import { PrismaClient } from "../../generated/prisma/client";
+
+function getEnvValue(key: string): string {
+  const value = process.env[key]
+  if (!value) throw new Error(`环境变量${key}不存在!`)
+  else return value
+}
 
 const prismaClientSingleton = () => {
   const adapter = new PrismaMariaDb({
-    host: process.env.DATABASE_HOST!,
+    host: getEnvValue('DATABASE_HOST'),
     port: Number(process.env.DATABASE_PORT ?? 3306),
-    user: process.env.DATABASE_USER!,
-    password: process.env.DATABASE_PASSWORD!,
-    database: process.env.DATABASE_NAME!,
+    user: getEnvValue('DATABASE_USER'),
+    password: getEnvValue('DATABASE_PASSWORD'),
+    database: getEnvValue('DATABASE_NAME'),
+    allowPublicKeyRetrieval: true, // 获取RSA公钥
     connectionLimit: 5
   })
+
+  console.log('prisma client setup success')
 
   return new PrismaClient({ adapter })
 }
