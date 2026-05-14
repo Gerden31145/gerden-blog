@@ -32,9 +32,9 @@ export default defineEventHandler(async (): Promise<APIResponse<PostList[]>> => 
     id: item.id.toString(),
     title: item.title,
     summary: item.summary ?? '',
-    published_at: item.published_at!,
+    published_at: item.published_at!.toISOString(),
     tags: item.post_tags.map((item) => (item.tags.name))
   }))
 
-  return success<PostList[]>(serializeBigInt<typeof posts, PostList[]>(posts))
+  return success<PostList[]>(result)
 })

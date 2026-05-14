@@ -17,6 +17,6 @@ export interface PostList {
   title: string,
   summary?: string,
   coverImage?: string,
-  published_at: Date,
+  published_at: string,
   tags: string[]
 }
