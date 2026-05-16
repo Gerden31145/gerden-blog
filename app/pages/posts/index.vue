@@ -6,10 +6,14 @@
     <div v-for="(post) in postList"
     :key="post.id"
     >
-      <PostsPostListContainer
-      :posts="post"
-      />
-    </div>
+      <NuxtLink
+      :to="`/posts/${post.slug}`"
+      >
+        <PostsPostListContainer
+        :posts="post"
+      /> 
+      </NuxtLink>
+   </div>
   </div>
 </template>
 

@@ -1,12 +1,12 @@
 type PostsStatus = 'draft' | 'published' | 'hidden'
 
 export interface Posts {
-  id: number,
+  id: string,
   title: string,
   slug: string,
   summary?: string,
   content: string,
-  postStatus: PostsStatus,
+  post_status: PostsStatus,
   coverImage?: string,
   published_at: string,
   post_tags: Array<string>
@@ -18,5 +18,6 @@ export interface PostList {
   summary?: string,
   coverImage?: string,
   published_at: string,
+  slug: string,
   tags: string[]
 }

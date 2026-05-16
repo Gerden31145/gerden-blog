@@ -10,7 +10,3 @@
 body {
   @apply bg-background
 }
-
-.router-link-active {
-  @apply font-extrabold
-}

@@ -3,15 +3,21 @@
     <div class="text-3xl">GDB</div>
     <div class="w-[30%]">
       <div class="flex gap-4 w-[100%]">
-        <div class="w-[30%] text-center">
+        <div class="w-[30%] text-center"
+       :class="isActive('/')?'font-extrabold':''"  
+        >
           <NuxtLink to="/">HOME</NuxtLink> 
         </div>
         <div>|</div>
-        <div class="w-[30%] text-center">
+        <div class="w-[30%] text-center"
+       :class="isActive('/posts')?'font-extrabold':''"  
+        >
           <NuxtLink to="/posts">POSTS</NuxtLink> 
         </div> 
         <div>|</div>
-        <div class="w-[30%]">
+        <div class="w-[30%]"
+        :class="isActive('/works')?'font-extrabold':''" 
+        >
           <NuxtLink to="/works">WORK</NuxtLink>
         </div>
       </div>
@@ -20,6 +26,12 @@
 </template>
 
 <script lang="ts" setup>
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+function isActive(prefix:string) {
+  return route.path.startsWith(prefix+'/') || route.path === prefix
+}
 
 </script>
 
