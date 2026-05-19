@@ -7,10 +7,18 @@
 
 import { z } from "zod";
 import { createError, getHeader, readFormData } from 'h3'
-import type { H3Event } from "h3";
+import type { H3Event, MultiPartData } from "h3";
 import markdownToHTML from '../utils/markdown/markdown'
 import { generateSlug } from "../utils/slug";
 import { prisma } from "../utils/prisma";
+
+interface ResJSON {
+  title: string,
+  slug?: string,
+  tags: string[],
+  summary: string,
+  post_status: 'draft' | 'published' | 'hidden'
+}
 
 const createPostSchema = z.object({
   title: z.string().min(1, '标题不能为空').max(100, '标题过长'),
@@ -20,24 +28,18 @@ const createPostSchema = z.object({
   tags: z.array(z.string().min(1)).default([])
 })
 
-function getString(formData: FormData, key: string) {
-  const value = formData.get(key)
-  return typeof value === 'string' ? value : undefined
+function getString(parts: ResJSON, key: keyof ResJSON) {
+  return parts[key] ? parts[key] : undefined
 }
 
-function getTags(formData: FormData) {
-  const value = formData.get('tags')
+function getTags(parts: ResJSON) {
+  const value = parts.tags
 
   if (!value) return []
-  if (typeof value !== 'string') throw new Error('数组类型错误')
 
   try {
-    const tags = JSON.parse(value)
-
-    if (!Array.isArray(tags)) throw new Error('tags期望数组类型')
-
-    return tags.filter((tag): tag is string => typeof tag === 'string')
-      .map(tag => tag.trim())
+    if (!Array.isArray(value)) throw new Error('tags期望数组类型')
+    return value
   } catch {
     throw new Error('处理formData的tags数组出现错误')
   }
@@ -79,54 +81,49 @@ async function generateOnlyTagSlug(baseSlug: string) {
   }
 }
 
-async function readPostFormData(event: H3Event) {
-  const contentType = getHeader(event, 'content-type')
-
-  if (!contentType?.includes('multipart/form-data')) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: '请求体必须是 multipart/form-data，请使用 form-data 并上传 file 字段'
-    })
-  }
-
-  try {
-    return await readFormData(event)
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : '未知错误'
-
-    throw createError({
-      statusCode: 400,
-      statusMessage: `FormData 解析失败：请求头是 multipart/form-data，但请求体不是合法的 multipart 格式，或 boundary 与请求体不匹配。当前 Content-Type：${contentType}。原始错误：${reason}`
-    })
-  }
-}
-
 export async function createPost(event: H3Event) {
-  const formData = await readPostFormData(event)
-  const file = formData.get('file')
+  const parts = await readMultipartFormData(event)
 
-  if (!(file instanceof File)) {
+  if (!parts) {
+    throw createError({
+      statusCode: 400,
+      message: 'FormData数据为空'
+    })
+  }
+
+  const filePart = parts?.find(p => p.name === 'file')
+
+  const meta = parts.find(p => p.name === 'meta')
+
+  if (!filePart || !filePart.filename) {
     throw createError({
       statusCode: 400,
       statusMessage: '请上传文件'
     })
   }
 
-  if (!(file.name.endsWith('.md'))) {
+  if (!(filePart.filename.endsWith('.md'))) {
     throw createError({
       statusCode: 400,
       statusMessage: '请上传md文件'
     })
   }
 
-  const contentMd = await file.text()
+  const contentMd = filePart.data.toString('utf-8')
+
+  if (!meta) throw createError({
+    statusCode: 400,
+    message: 'meta内容为空'
+  })
+
+  const metaData = JSON.parse(meta.data.toString())
 
   const payload = createPostSchema.parse({
-    title: getString(formData, 'title'),
-    summary: getString(formData, 'summary'),
-    slug: getString(formData, 'slug'),
-    post_status: getString(formData, 'post_status'),
-    tags: getTags(formData)
+    title: getString(metaData, 'title'),
+    summary: getString(metaData, 'summary'),
+    slug: getString(metaData, 'slug'),
+    post_status: getString(metaData, 'post_status'),
+    tags: getTags(metaData)
   })
 
   const contentHTML = await markdownToHTML(contentMd)

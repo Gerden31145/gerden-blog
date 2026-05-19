@@ -1,13 +1,21 @@
 export default defineEventHandler(async (event) => {
-  const formData = await readFormData(event)
+  const parts = await readMultipartFormData(event)
 
-  const title = formData.get('title')
-  const file = formData.get('file')
+  const filePart = parts?.find(p => p.name === 'file')
+
+  const meta = parts?.find(p => p.name === 'meta')
+
+  if (!meta) throw createError({
+    message: 'meta 内容为空',
+    statusCode: 400
+  })
+
+  const metaData = meta ? meta.data.toString() : ''
 
   return {
     ok: true,
-    title,
-    fileIsFile: file instanceof File,
-    fileName: file instanceof File ? file.name : null,
+    // mdContent,
+    fileName: filePart?.filename,
+    data: metaData
   }
 })
