@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+.post h1 {
+  @apply font-extrabold text-3xl mb-12
+}
+
+.post h2 {
+  @apply font-extrabold text-2xl mb-10 mt-10
+}
+
+.post h3 {
+  @apply font-extrabold text-xl mb-8 mt-8
+}
+
+.post h4 {
+  @apply font-extrabold text-lg mb-7 mt-7
+}
+
+.post p,
+.post ol,
+.post pre,
+.post code,
+.post li,
+.post ul {
+  @apply text-lg
+}
+
+.post p {
+  @apply mt-2 mb-2
+}
+
+.post code:not(pre code) {
+  background-color: #b9d4f4;
+  @apply rounded p-0.5
+}
+
+.post pre {
+  background-color: #ccdff7;
+  @apply rounded p-1.5 mt-1 mb-1
+}
+
+.post pre span.line {
+  white-space: break-spaces;
+}

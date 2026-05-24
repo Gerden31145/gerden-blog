@@ -26,7 +26,7 @@ model posts {
   slug         String            @unique(map: "uk_posts_slug") @db.VarChar(255)
   summary      String?           @db.Text
   content      String            @db.LongText
-  content_html String?           @db.LongText
+  content_html String            @db.LongText
   post_status  posts_post_status @default(draft)
   cover_image  String?           @db.VarChar(500)
   published_at DateTime?         @db.DateTime(0)

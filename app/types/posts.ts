@@ -6,6 +6,7 @@ export interface Posts {
   slug: string,
   summary?: string,
   content: string,
+  contentHTML: string,
   post_status: PostsStatus,
   coverImage?: string,
   published_at: string,
