@@ -2,12 +2,17 @@ import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
-import rehypeShiki from '@shikijs/rehype'
 import rehypeShikiFromHighlighter from '@shikijs/rehype/core'
 import { createHighlighter } from 'shiki'
 import type { HighlighterGeneric, BundledLanguage, BundledTheme } from 'shiki'
+
+export interface TocItem {
+  id: string
+  text: string
+  depth: number
+}
 
 const myTheme = {
   name: 'my-theme',
@@ -97,25 +102,70 @@ const myTheme = {
   ]
 }
 
-let highlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | null = null // highligher实例
+// 允许 id 属性通过 sanitize（用于标题锚点）
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...(defaultSchema.attributes ?? {}),
+    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'id']
+  }
+}
+
+function extractText(node: any): string {
+  if (node.type === 'text' || node.type === 'inlineCode') return node.value
+  if (node.children) return node.children.map(extractText).join('')
+  return ''
+}
+
+// 提取标题并添加 id 属性，用于生成目录索引
+function remarkExtractToc() {
+  return (tree: any, file: any) => {
+    const toc: TocItem[] = []
+    const slugCount: Record<string, number> = {}
+
+    for (const node of tree.children) {
+      if (node.type === 'heading') {
+        const text = extractText(node)
+        const baseSlug = text.toLowerCase().trim().replace(/\s+/g, '-')
+        slugCount[baseSlug] = (slugCount[baseSlug] || 0) + 1
+        const id = slugCount[baseSlug] > 1
+          ? `${baseSlug}-${slugCount[baseSlug]}`
+          : baseSlug
+
+        node.data = node.data || {}
+        node.data.hProperties = node.data.hProperties || {}
+        node.data.hProperties.id = id
+
+        toc.push({ id, text, depth: node.depth })
+      }
+    }
+
+    file.data.toc = toc
+  }
+}
+
+let highlighter: HighlighterGeneric<BundledLanguage, BundledTheme> | null = null
 
 export default async function markdownToHTML(markdown: string) {
   highlighter = !highlighter ? await createHighlighter({
     themes: [myTheme],
-    langs: ['javascript', 'typescript', 'ts', 'js', 'c++', 'java', 'vue']
+    langs: ['javascript', 'typescript', 'ts', 'js', 'c++', 'java', 'vue', 'html', 'vue-html']
   }) : highlighter
 
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkExtractToc)
     .use(remarkRehype)
-    .use(rehypeSanitize)
+    .use(rehypeSanitize, sanitizeSchema)
     .use(rehypeShikiFromHighlighter, highlighter, {
-      // or `theme` for a single theme
       theme: 'my-theme'
     })
     .use(rehypeStringify)
     .process(markdown)
 
-  return String(file)
+  return {
+    html: String(file),
+    toc: (file.data.toc || []) as TocItem[]
+  }
 }

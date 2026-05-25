@@ -126,7 +126,7 @@ export async function createPost(event: H3Event) {
     tags: getTags(metaData)
   })
 
-  const contentHTML = await markdownToHTML(contentMd)
+  const { html: contentHTML, toc } = await markdownToHTML(contentMd)
 
   let slug = payload.slug || generateSlug(payload.title)
   slug = await generateOnlyPostSlug(slug)
@@ -141,6 +141,7 @@ export async function createPost(event: H3Event) {
         post_status: payload.post_status,
         content: contentMd,
         content_html: contentHTML,
+        toc: toc,
         published_at: payload.post_status === 'published' ? new Date() : null
       }
     })

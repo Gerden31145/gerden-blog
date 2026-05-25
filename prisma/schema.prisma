@@ -27,6 +27,7 @@ model posts {
   summary      String?           @db.Text
   content      String            @db.LongText
   content_html String            @db.LongText
+  toc          Json?             @db.Json
   post_status  posts_post_status @default(draft)
   cover_image  String?           @db.VarChar(500)
   published_at DateTime?         @db.DateTime(0)
