@@ -105,6 +105,7 @@ const myTheme = {
 // 允许 id 属性通过 sanitize（用于标题锚点）
 const sanitizeSchema = {
   ...defaultSchema,
+  clobberPrefix: '',
   attributes: {
     ...(defaultSchema.attributes ?? {}),
     '*': [...(defaultSchema.attributes?.['*'] ?? []), 'id']

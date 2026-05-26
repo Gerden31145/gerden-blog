@@ -36,7 +36,8 @@ export default defineEventHandler(async (e): Promise<APIResponse<Posts>> => {
     coverImage: postDetail.cover_image ?? '',
     published_at: postDetail.published_at?.toISOString()!,
     post_tags: postDetail.post_tags.map((tags) => tags.tags.name),
-    contentHTML: postDetail.content_html
+    contentHTML: postDetail.content_html,
+    toc: (postDetail.toc as any[]) ?? []
   }
   return success(result)
 })

@@ -22,6 +22,10 @@ import { ref , computed} from 'vue';
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
 
+useHead({
+  title:'Posts'
+})
+
 const {data, pending:isLoading, status} = await PostApi.getList()
 const postList = computed(() => data.value?.data ?? [])
 

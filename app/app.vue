@@ -4,3 +4,8 @@
     <NuxtPage />   
   </div>
 </template>
+<script setup lang="ts">
+useHead({
+  titleTemplate:(title) => title?`${title} - Gerden Blog`:'Gerden Blog'
+})
+</script>

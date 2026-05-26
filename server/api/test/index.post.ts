@@ -1,21 +1,19 @@
 export default defineEventHandler(async (event) => {
-  const parts = await readMultipartFormData(event)
+  const body = await readBody<{ password?: string }>(event)
 
-  const filePart = parts?.find(p => p.name === 'file')
-
-  const meta = parts?.find(p => p.name === 'meta')
-
-  if (!meta) throw createError({
-    message: 'meta 内容为空',
-    statusCode: 400
+  if (!body.password) throw createError({
+    statusCode: 400,
+    message: '请输入需要加密的密码'
   })
 
-  const metaData = meta ? meta.data.toString() : ''
+  if (typeof body.password !== 'string') throw createError({
+    statusCode: 400,
+    message: `请输入字符串类型的密码，当前类型：${typeof body.password}`
+  })
+
+  const hash = await hashPassword(body.password)
 
   return {
-    ok: true,
-    // mdContent,
-    fileName: filePart?.filename,
-    data: metaData
+    hash
   }
 })
