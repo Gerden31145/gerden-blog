@@ -1,4 +1,7 @@
-export default defineEventHandler(async (event) => {
+import { success, error } from '../../utils/api/response'
+import type { APIResponse } from '~/types/api';
+
+export default defineEventHandler(async (event): Promise<APIResponse<{ ok: boolean }>> => {
   const body = await readBody<{ password?: string; username?: string }>(event)
 
   const password = body.password ? body.password.trim() : ''
@@ -30,8 +33,6 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  return {
-    ok: true
-  }
+  return success({ ok: true })
 
 })

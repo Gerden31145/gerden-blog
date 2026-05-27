@@ -141,7 +141,7 @@ export async function createPost(event: H3Event) {
         post_status: payload.post_status,
         content: contentMd,
         content_html: contentHTML,
-        toc: toc,
+        toc: JSON.parse(JSON.stringify(toc)) as object,
         published_at: payload.post_status === 'published' ? new Date() : null
       }
     })

@@ -1,8 +1,7 @@
 <template>
-  <div class=" max-w-[50%] mx-auto">
-    <NavBar />
-    <NuxtPage />   
-  </div>
+ <NuxtLayout>
+  <NuxtPage></NuxtPage>
+ </NuxtLayout> 
 </template>
 <script setup lang="ts">
 useHead({
