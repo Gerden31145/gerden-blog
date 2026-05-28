@@ -20,18 +20,33 @@
         >
           <NuxtLink to="/works">WORK</NuxtLink>
         </div>
+        <div v-if="isAdmin">|</div>
+        <div class="w-[30%]"
+        :class="isActive('/admin')?'font-extrabold':''" 
+        v-if="isAdmin"
+        >
+          <NuxtLink to="/admin">ADMIN</NuxtLink>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 const route = useRoute()
 
 function isActive(prefix:string) {
   return route.path.startsWith(prefix+'/') || route.path === prefix
 }
+
+const { user } = useUserSession()
+
+const isAdmin = computed(():boolean => {
+  if (!user.value) return false
+  else return user.value.role === 'admin'
+})
 
 </script>
 

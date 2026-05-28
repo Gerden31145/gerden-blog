@@ -1,7 +1,7 @@
 <template>
   <div class="font-serif flex-col justify-center items-center flex h-full">
    <div class="text-4xl mt-4 text-text-primary">Welcome Back</div> 
-   <form class="text-xl mt-8" v-if="!logSuccess">
+   <form class="text-xl mt-8" v-if="!logSuccess" @submit.prevent="handleSubmit">
     <div class="mt-4">
       <input 
         placeholder="USERNAME" type="text" class="outline-none border-b text-lg border-b-[#4b596a]"
@@ -40,7 +40,8 @@ import { loginAPI } from '~/services/login'
 import type { APIResponse } from '~/types/api'
 
 definePageMeta({
-  layout:'blank'
+  layout:'blank',
+  middleware:'logged'
 })
 
 type User = {
@@ -75,6 +76,8 @@ const handleSubmit = async () => {
   isSubmiting.value = true
   validatePsw()
   validateUname()
+  logError.value = false
+  logMsg.value = ''
   if (usernameError.value || pswError.value) {
     isSubmiting.value = false
     return
@@ -87,6 +90,9 @@ const handleSubmit = async () => {
   }
   else {
     logSuccess.value = true  
+    const { fetch } = useUserSession()
+    await fetch()
+    navigateTo('/admin')
   }
 
   isSubmiting.value = false
