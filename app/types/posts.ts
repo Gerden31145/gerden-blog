@@ -29,3 +29,8 @@ export interface PostList {
   slug: string,
   tags: string[]
 }
+
+export type editedPost = Pick<PostList, 'title' | 'summary' | 'tags'> & {
+  file?: File,
+  post_status: 'published' | 'draft' | 'hidden'
+}

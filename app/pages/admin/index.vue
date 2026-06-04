@@ -4,13 +4,14 @@
     <div class="w-full mt-4">
       <div class="mt-3 w-full text-left flex justify-between">
         <span class="text-4xl">Posts List</span>
-        <span class="text-3xl cursor-pointer">+</span>
+        <span class="text-3xl cursor-pointer" @click="openModal('Upload')">+</span>
       </div>
       <div v-for="item in list"
       :key="item.id" 
       >
         <AdminPostContainer
         :post="item" 
+        @open-modal="openModal('Update', item)"
         ></AdminPostContainer>
       </div>
       <div v-if="list.length === 0">
@@ -22,10 +23,12 @@
       @click="handleLogout"
       class="text-2xl text-red-50 bg-text-primary rounded-lg p-1">Logout</button>
     </div>
+    <BaseModal v-if="modalOpen" @close="closeModal" :post="postInfo" :status="modalStatus"></BaseModal>
       </div>
 </template>
 
 <script lang="ts" setup>
+import { ref } from 'vue'
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
 import { loginAPI } from '~/services/login';
@@ -43,6 +46,21 @@ const handleLogout = async () => {
   const { clear } = useUserSession()
   await clear()
   navigateTo('/')
+}
+
+const modalOpen = ref<boolean>(false)
+const closeModal = () => {
+  modalOpen.value = false
+}
+
+const postInfo = ref<PostList | undefined>()
+
+const modalStatus = ref<'Upload' | 'Update'>('Upload')
+
+const openModal = (status:'Upload' | 'Update', post?:PostList) => {
+  modalOpen.value = true
+  postInfo.value = post
+  modalStatus.value = status
 }
 
 </script>

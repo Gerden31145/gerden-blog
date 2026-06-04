@@ -1,6 +1,6 @@
 // 博客文章相关API模块
 import type { APIResponse } from "~/types/api";
-import type { PostList, Posts } from "~/types/posts";
+import type { PostList, Posts, editedPost } from "~/types/posts";
 
 export const PostApi = {
   getList() { // 获取博客文章列表
@@ -8,5 +8,26 @@ export const PostApi = {
   },
   getDetail(slug: string) {
     return useAPI<APIResponse<Posts>>(`posts/${slug}`)
+  },
+  create(post: editedPost) {
+    const formData = new FormData()
+    const meta = JSON.stringify({
+      title: post.title,
+      summary: post.summary,
+      tags: post.tags,
+      post_status: 'published'
+    })
+
+    formData.append('meta', meta)
+    if (!post.file) throw createError({
+      message: 'Please upload file',
+      statusCode: 400
+    })
+    formData.append('file', post.file)
+
+    return useAPI<APIResponse<{ message: string }>>('posts', {
+      method: 'POST',
+      body: formData
+    })
   }
 }

@@ -172,3 +172,26 @@ export async function createPost(event: H3Event) {
     message: '创建文章成功'
   }
 }
+
+export async function deletePost(id: bigint) {
+  const post = await prisma.posts.findUnique({
+    where: {
+      id
+    }
+  })
+
+  if (!post) throw createError({
+    statusCode: 404,
+    message: 'Post not found'
+  })
+
+  await prisma.posts.delete({
+    where: {
+      id
+    }
+  })
+
+  return {
+    message: 'delete success'
+  }
+}
