@@ -27,10 +27,15 @@ export interface PostList {
   coverImage?: string,
   published_at: string,
   slug: string,
-  tags: string[]
+  tags: string[],
+  post_status: PostsStatus
 }
 
 export type editedPost = Pick<PostList, 'title' | 'summary' | 'tags'> & {
   file?: File,
   post_status: 'published' | 'draft' | 'hidden'
+}
+
+export type updatedPost = PostList & {
+  file?: File
 }

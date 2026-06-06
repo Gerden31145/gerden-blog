@@ -5,7 +5,7 @@
         <div class="absolute bg-black/45 inset-0"></div>
         <div v-if="props.status !== 'Delete'" class="relative z-10 w-xl bg-blue-50 rounded-2xl flex justify-start items-center p-6 flex-col">
           <div class="w-full mb-2 text-2xl flex justify-end" @click="handleClose"><svg t="1779959060742" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5192" width="32" height="32"><path d="M512 466.944l233.472-233.472a31.744 31.744 0 0 1 45.056 45.056L557.056 512l233.472 233.472a31.744 31.744 0 0 1-45.056 45.056L512 557.056l-233.472 233.472a31.744 31.744 0 0 1-45.056-45.056L466.944 512 233.472 278.528a31.744 31.744 0 0 1 45.056-45.056z" fill="#2c2c2c" p-id="5193"></path></svg></div>
-          <form class="w-[90%] flex flex-col items-center" @submit.prevent="handleSubmit">
+          <form class="w-[90%] flex flex-col items-center" @submit.prevent="clickChoose">
             <div class="text-3xl">Post Infomation</div>
             <div class="w-full grid grid-cols-[1fr_4fr] gap-2 mb-4">
               <span class="text-xl mr-3 text-right">Title</span>
@@ -52,7 +52,7 @@
               </div>
             </div>
             <button 
-            @click.prevent="handleSubmit"
+            @click.prevent="clickChoose"
             :disabled="submitStatus === 'uploading'" 
             :class="{'text-text-primay/50:':submitStatus === 'uploading'}"
             class="border-text-primary p-1 rounded border text-2xl mb-2">Submit</button>
@@ -87,14 +87,14 @@
 
 <script lang="ts" setup>
 import { ref,reactive } from 'vue'
-import type { PostList, editedPost } from '~/types/posts';
+import type { PostList, editedPost, updatedPost } from '~/types/posts';
 import { PostApi } from '~/services/posts';
 import { useToast } from '#imports';
 import type { modalStatusType } from '~/types/modal';
 const emit = defineEmits(['close', 'refetch'])
 const props = defineProps<{
   status:modalStatusType
-  post?:PostList
+  post:PostList
 }>()
 
 const handleClose = () => {
@@ -182,6 +182,38 @@ const handleDelete = async () => {
   }
 }
 
+const handleUpdate = async () => {
+  submitStatus.value = 'uploading'
+  try {
+    const postUpload:updatedPost = {
+        title: newTitle.value,
+        summary: newSummary.value,
+        tags: tagsList.value,
+        file: newFile.value,
+        post_status: 'published',
+        slug:props.post.slug,
+        id:props.post.id,
+        published_at:props.post.published_at
+    } 
+    await PostApi.updatePost(postUpload)   
+    submitStatus.value = 'idle' 
+    toast.addMessage('Update success')
+    emit('refetch')
+    emit('close')
+  } catch(err) {
+    submitStatus.value = 'error'
+    if (err instanceof Error)
+    submitError.value = err.message
+  } 
+}
+
+const clickChoose = () => {
+  if (props.status === 'Upload') {
+      handleSubmit()
+    } else {
+      handleUpdate()
+    }
+}
 </script>
 
 <style>

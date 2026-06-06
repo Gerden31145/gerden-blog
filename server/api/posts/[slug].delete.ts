@@ -1,6 +1,7 @@
 import { deletePost } from "~~/server/services/post.service";
 import { success } from "../../utils/api/response";
-import { H3Event, requireAdmin } from "#imports";
+import { requireAdmin } from "../../utils/api/requireAdmin";
+import type { H3Event } from 'h3'
 
 export default defineEventHandler(async (e: H3Event) => {
   requireAdmin(e)

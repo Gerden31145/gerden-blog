@@ -1,4 +1,4 @@
-import { APIResponse, APIStatus } from "~/types/api";
+import type { APIResponse, APIStatus } from "~/types/api";
 
 export function success<T>(data: T, message = 'success'): APIResponse<T> {
   return {

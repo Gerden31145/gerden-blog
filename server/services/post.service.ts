@@ -11,7 +11,7 @@ import type { H3Event, MultiPartData } from "h3";
 import markdownToHTML from '../utils/markdown/markdown'
 import { generateSlug } from "../utils/slug";
 import { prisma } from "../utils/prisma";
-import { PostList } from "~/types/posts";
+import type { PostList } from "~/types/posts";
 
 interface ResJSON {
   title: string,
@@ -84,11 +84,11 @@ async function generateOnlyTagSlug(baseSlug: string) {
   }
 }
 
-async function updateSlug(updatedSlug: string, title: string) {
+async function updateSlug(id: bigint, title: string) {
 
   const post = await prisma.posts.findUnique({
     where: {
-      slug: updatedSlug
+      id
     }
   })
 
@@ -215,7 +215,7 @@ export async function deletePost(slug: string) {
   }
 }
 
-export async function updatePost(event: H3Event) {
+export async function updatePost(event: H3Event, paramSlug: string) {
   const parts = await readMultipartFormData(event)
 
   if (!parts) throw createError({
@@ -289,13 +289,13 @@ export async function updatePost(event: H3Event) {
         updated_at: new Date()
       },
       where: {
-        id
+        slug: paramSlug
       }
     })
 
     await tx.post_tags.deleteMany({
       where: {
-        post_id: id
+        post_id: updatedPost.id
       }
     })
 

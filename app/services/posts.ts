@@ -1,6 +1,6 @@
 // 博客文章相关API模块
 import type { APIResponse } from "~/types/api";
-import type { PostList, Posts, editedPost } from "~/types/posts";
+import type { PostList, Posts, editedPost, updatedPost } from "~/types/posts";
 
 export const PostApi = {
   getList() { // 获取博客文章列表
@@ -37,5 +37,35 @@ export const PostApi = {
     return $api<APIResponse<{ message: string }>>(`posts/${slug}`, {
       method: 'DELETE'
     })
+  },
+  updatePost(post: updatedPost) {
+    const formData = new FormData()
+
+    const meta = JSON.stringify({
+      id: post.id,
+      title: post.title,
+      summary: post.summary,
+      slug: post.slug,
+      tags: post.tags,
+      post_status: post.post_status,
+      published_at: post.published_at
+    })
+
+    formData.append('meta', meta)
+
+    if (!post.file) throw createError({
+      message: 'please upload file'
+    })
+
+    formData.append('file', post.file)
+
+    const { $api } = useNuxtApp()
+    return $api<APIResponse<{ message: string }>>(
+      `posts/${post.slug}`,
+      {
+        method: 'PUT',
+        body: formData
+      }
+    )
   }
 }

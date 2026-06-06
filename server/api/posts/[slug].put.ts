@@ -1,16 +1,16 @@
 import type { APIResponse } from "~/types/api";
-import { H3Event, success, error } from "#imports";
+import { success, error } from "../../utils/api/response";
 import { updatePost } from "~~/server/services/post.service";
+import type { H3Event } from 'h3'
 
 export default defineEventHandler(async (event: H3Event) => {
-  requireAdmin(event)
+  await requireAdmin(event)
 
   const slug = getRouterParam(event, 'slug')
-  try {
-    const result = await updatePost(slug)
-    return success(result)
-  } catch (err) {
-    if (err instanceof Error)
-      return error('500', err.message)
-  }
+  if (!slug) throw createError({
+    message: 'slug required'
+  })
+  const result = await updatePost(event, slug)
+  return success(result)
+
 })

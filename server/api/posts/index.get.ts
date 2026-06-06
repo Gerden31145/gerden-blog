@@ -13,7 +13,7 @@ export default defineEventHandler(async (): Promise<APIResponse<PostList[]>> => 
       summary: true,
       slug: true,
       published_at: true,
-
+      post_status: true,
       post_tags: {
         select: {
           tags: {
@@ -35,7 +35,8 @@ export default defineEventHandler(async (): Promise<APIResponse<PostList[]>> => 
     summary: item.summary ?? '',
     published_at: item.published_at!.toISOString(),
     slug: item.slug,
-    tags: item.post_tags.map((item) => (item.tags.name))
+    tags: item.post_tags.map((item) => (item.tags.name)),
+    post_status: item.post_status
   }))
 
   return success<PostList[]>(result)
