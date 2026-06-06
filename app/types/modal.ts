@@ -1,0 +1,1 @@
+export type modalStatusType = 'Upload' | 'Update' | 'Delete'

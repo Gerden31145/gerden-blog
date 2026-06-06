@@ -10,6 +10,7 @@ export const PostApi = {
     return useAPI<APIResponse<Posts>>(`posts/${slug}`)
   },
   create(post: editedPost) {
+    const { $api } = useNuxtApp()
     const formData = new FormData()
     const meta = JSON.stringify({
       title: post.title,
@@ -25,9 +26,16 @@ export const PostApi = {
     })
     formData.append('file', post.file)
 
-    return useAPI<APIResponse<{ message: string }>>('posts', {
+    return $api<APIResponse<{ message: string }>>('posts', {
       method: 'POST',
       body: formData
+    })
+  },
+  deletePost(slug: string) {
+    const { $api } = useNuxtApp()
+
+    return $api<APIResponse<{ message: string }>>(`posts/${slug}`, {
+      method: 'DELETE'
     })
   }
 }

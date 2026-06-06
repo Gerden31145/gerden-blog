@@ -5,6 +5,15 @@
 - **技术栈**: Nuxt 4 + TypeScript + Prisma + MySQL + Tailwind CSS
 - **性质**: 个人博客项目（学习阶段）
 
+## 页面组件位置
+
+页面目录：`app/pages/`
+
+- 首页：`index.vue`
+- 作品页：`Works.vue`
+- 管理页面：`admin/*`
+- 博客文章页：`posts/*`
+
 ## Code Review 规则
 
 当用户要求 review 代码时，按以下流程执行：

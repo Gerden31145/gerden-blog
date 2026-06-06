@@ -11,7 +11,7 @@
       >
         <AdminPostContainer
         :post="item" 
-        @open-modal="openModal('Update', item)"
+        @open-modal="(status) => openModal(status, item)"
         ></AdminPostContainer>
       </div>
       <div v-if="list.length === 0">
@@ -21,9 +21,13 @@
     <div class="flex w-full items-center justify-end mt-8">
       <button 
       @click="handleLogout"
-      class="text-2xl text-red-50 bg-text-primary rounded-lg p-1">Logout</button>
+      class="text-2xl text-red-50 bg-text-primary rounded w-36 p-1">Logout</button>
     </div>
-    <BaseModal v-if="modalOpen" @close="closeModal" :post="postInfo" :status="modalStatus"></BaseModal>
+    <BaseModal 
+    v-if="modalOpen" 
+    @close="closeModal" 
+    @refetch="getData" 
+    :post="postInfo" :status="modalStatus"></BaseModal>
       </div>
 </template>
 
@@ -31,16 +35,21 @@
 import { ref } from 'vue'
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
-import { loginAPI } from '~/services/login';
+import type { modalStatusType } from '~/types/modal';
+import { start } from 'node:repl';
 
 definePageMeta({
   layout:'default',
   middleware:'admin'
 })
 
-const { data } = await PostApi.getList()
+const { data, refresh } = await PostApi.getList()
 
-const list:PostList[] = data.value?.data?? []
+const list = computed<PostList[]>(() => data.value?.data ?? [])
+
+const getData = () => {
+  refresh()
+}
 
 const handleLogout = async () => {
   const { clear } = useUserSession()
@@ -55,9 +64,9 @@ const closeModal = () => {
 
 const postInfo = ref<PostList | undefined>()
 
-const modalStatus = ref<'Upload' | 'Update'>('Upload')
+const modalStatus = ref<modalStatusType>('Upload')
 
-const openModal = (status:'Upload' | 'Update', post?:PostList) => {
+const openModal = (status:modalStatusType, post?:PostList) => {
   modalOpen.value = true
   postInfo.value = post
   modalStatus.value = status

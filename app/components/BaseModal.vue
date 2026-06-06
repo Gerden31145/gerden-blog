@@ -3,7 +3,7 @@
     <Teleport to="body">
       <div class="font-serif inset-0 fixed justify-center items-center flex flex-col">
         <div class="absolute bg-black/45 inset-0"></div>
-        <div class="relative z-10 w-xl bg-blue-50 rounded-2xl flex justify-start items-center p-6 flex-col">
+        <div v-if="props.status !== 'Delete'" class="relative z-10 w-xl bg-blue-50 rounded-2xl flex justify-start items-center p-6 flex-col">
           <div class="w-full mb-2 text-2xl flex justify-end" @click="handleClose"><svg t="1779959060742" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5192" width="32" height="32"><path d="M512 466.944l233.472-233.472a31.744 31.744 0 0 1 45.056 45.056L557.056 512l233.472 233.472a31.744 31.744 0 0 1-45.056 45.056L512 557.056l-233.472 233.472a31.744 31.744 0 0 1-45.056-45.056L466.944 512 233.472 278.528a31.744 31.744 0 0 1 45.056-45.056z" fill="#2c2c2c" p-id="5193"></path></svg></div>
           <form class="w-[90%] flex flex-col items-center" @submit.prevent="handleSubmit">
             <div class="text-3xl">Post Infomation</div>
@@ -61,7 +61,26 @@
             >Error: {{ submitError }}</div>
           </form>
         </div>
+        <div
+        v-else 
+        class="bg-relative z-10 w-xl bg-blue-50 rounded-2xl flex justify-start items-center p-4 flex-col" 
+        >
+           <div class="w-full mb-2 text-2xl flex justify-end" @click="handleClose"><svg t="1779959060742" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5192" width="30" height="30"><path d="M512 466.944l233.472-233.472a31.744 31.744 0 0 1 45.056 45.056L557.056 512l233.472 233.472a31.744 31.744 0 0 1-45.056 45.056L512 557.056l-233.472 233.472a31.744 31.744 0 0 1-45.056-45.056L466.944 512 233.472 278.528a31.744 31.744 0 0 1 45.056-45.056z" fill="#2c2c2c" p-id="5193"></path></svg></div>
+          <div class="text-2xl">Are you sure you want to <span class=" font-extrabold">DELETE</span> this article?</div>
+          <div class="text-2xl"><span>{{ `No.${props.post?.id} ` }}</span>{{ props.post?.title }}</div>
+          <div class="flex w-[30%] justify-between mt-5">
+            <button 
+            @click="handleDelete" 
+            class="p-1 rounded bg-text-primary text-blue-50">Delete</button>
+            <button 
+            @click="handleClose" 
+            class="rounded border p-1">Cancel</button>
+          </div>
+          <div
+          class="mt-4 text-red-600" v-if="submitStatus === 'error'">Error: {{ submitError }}</div>
+        </div>
       </div>
+      
     </Teleport>
   </div>
 </template>
@@ -70,9 +89,11 @@
 import { ref,reactive } from 'vue'
 import type { PostList, editedPost } from '~/types/posts';
 import { PostApi } from '~/services/posts';
-const emit = defineEmits(['close'])
+import { useToast } from '#imports';
+import type { modalStatusType } from '~/types/modal';
+const emit = defineEmits(['close', 'refetch'])
 const props = defineProps<{
-  status:'Upload' | 'Update'
+  status:modalStatusType
   post?:PostList
 }>()
 
@@ -88,7 +109,6 @@ if (props.status === 'Update') {
 }
 const removeTags = (tag:string) => {
   let index = tagsList.value.indexOf(tag) 
-  console.log('删除元素：', tag)
   tagsList.value.splice(index, 1)
 }
 
@@ -115,6 +135,8 @@ const newTitle = ref<string>(props.status === 'Update' ? (props.post?.title ?? '
 const newSummary = ref<string>(props.status === 'Update' ? (props.post?.summary ?? '') : '')
 const newFile = ref<File>()
 
+const toast = useToast()
+
 const submitStatus = ref<'uploading' | 'error' | 'idle'>('idle')
 const submitError = ref<string>('')
 const handleSubmit = async () => {
@@ -130,8 +152,30 @@ const handleSubmit = async () => {
     } 
     await PostApi.create(postUpload)   
     submitStatus.value = 'idle' 
-    location.reload()
+    toast.addMessage('Upload success')
+    emit('refetch')
+    emit('close')
   } catch(err) {
+    submitStatus.value = 'error'
+    if (err instanceof Error)
+    submitError.value = err.message
+  }
+}
+
+const handleDelete = async () => {
+  try {
+    if (props.post?.slug) {
+    await PostApi.deletePost(props.post.slug)
+    toast.addMessage('Delete success')
+    emit('refetch')
+    emit('close')
+    submitStatus.value = 'idle'
+    }
+    else throw createError({
+      message:'id not exist',
+      statusCode:400
+    })
+  } catch (err) {
     submitStatus.value = 'error'
     if (err instanceof Error)
     submitError.value = err.message
