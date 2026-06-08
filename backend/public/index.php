@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/../src/Core/Response.php';
 require __DIR__ . '/../src/Core/Router.php';
+require __DIR__ . '/../src/Lib/Parsedown.php';
+require __DIR__ . '/../src/Services/MarkdownService.php';
 require __DIR__ . '/../src/Controllers/HealthController.php';
 require __DIR__ . '/../src/Core/Database.php';
 require __DIR__ . '/../src/Repositories/TagRepository.php';
