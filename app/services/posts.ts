@@ -26,15 +26,15 @@ export const PostApi = {
     })
     formData.append('file', post.file)
 
-    return $api<APIResponse<{ message: string }>>('posts', {
+    return $api<APIResponse<{ message: string }>>('admin/posts', {
       method: 'POST',
       body: formData
     })
   },
-  deletePost(slug: string) {
+  deletePost(id: string) {
     const { $api } = useNuxtApp()
 
-    return $api<APIResponse<{ message: string }>>(`posts/${slug}`, {
+    return $api<APIResponse<{ message: string }>>(`admin/posts/${id}`, {
       method: 'DELETE'
     })
   },
@@ -61,9 +61,9 @@ export const PostApi = {
 
     const { $api } = useNuxtApp()
     return $api<APIResponse<{ message: string }>>(
-      `posts/${post.slug}`,
+      `admin/posts/${post.id}/update`,
       {
-        method: 'PUT',
+        method: 'POST',
         body: formData
       }
     )

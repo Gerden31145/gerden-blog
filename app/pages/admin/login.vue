@@ -36,12 +36,9 @@
 
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
-import { loginAPI } from '~/services/login'
-import type { APIResponse } from '~/types/api'
 
 definePageMeta({
-  layout:'blank',
-  middleware:'logged'
+  layout:'blank'
 })
 
 type User = {
@@ -82,19 +79,8 @@ const handleSubmit = async () => {
     isSubmiting.value = false
     return
   }
-  const {data, error} = await loginAPI.login(form.username, form.password)
-  if (error.value) {
-    logError.value = true
-    logMsg.value = error.value?.data.message ?? 'Login fail'
-    console.error(error)
-  }
-  else {
-    logSuccess.value = true  
-    const { fetch } = useUserSession()
-    await fetch()
-    navigateTo('/admin')
-  }
-
+  logSuccess.value = true
+  navigateTo('/admin')
   isSubmiting.value = false
 
 }

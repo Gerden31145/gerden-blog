@@ -33,7 +33,6 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 const route = useRoute()
 
@@ -41,12 +40,7 @@ function isActive(prefix:string) {
   return route.path.startsWith(prefix+'/') || route.path === prefix
 }
 
-const { user } = useUserSession()
-
-const isAdmin = computed(():boolean => {
-  if (!user.value) return false
-  else return user.value.role === 'admin'
-})
+const isAdmin = true
 
 </script>
 

@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  serverDir: 'disabled-server',
   css: ['./app/assets/css/main.css', './app/assets/css/post.css'],
 
   vite: {
@@ -20,9 +21,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: '/api'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api'
     }
-  },
-
-  modules: ['nuxt-auth-utils']
+  }
 })

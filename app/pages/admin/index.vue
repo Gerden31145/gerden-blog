@@ -36,11 +36,9 @@ import { ref } from 'vue'
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
 import type { modalStatusType } from '~/types/modal';
-import { start } from 'node:repl';
 
 definePageMeta({
-  layout:'default',
-  middleware:'admin'
+  layout:'default'
 })
 
 const { data, refresh } = await PostApi.getList()
@@ -52,8 +50,6 @@ const getData = () => {
 }
 
 const handleLogout = async () => {
-  const { clear } = useUserSession()
-  await clear()
   navigateTo('/')
 }
 

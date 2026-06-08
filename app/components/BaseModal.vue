@@ -164,8 +164,8 @@ const handleSubmit = async () => {
 
 const handleDelete = async () => {
   try {
-    if (props.post?.slug) {
-    await PostApi.deletePost(props.post.slug)
+    if (props.post?.id) {
+    await PostApi.deletePost(props.post.id)
     toast.addMessage('Delete success')
     emit('refetch')
     emit('close')
