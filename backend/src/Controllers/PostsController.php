@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Core\Response;
+use App\Middleware\AuthMiddleware;
 use App\Repositories\PostsRepository;
 use App\Services\MarkdownService;
 
@@ -40,6 +41,8 @@ class PostsController
 
   public function store(array $param = []): void
   {
+    AuthMiddleware::requireAdmin();
+
     $meta = $_POST['meta'] ?? '';
 
     if ($meta === '') {
@@ -94,6 +97,8 @@ class PostsController
 
   public function destroy(array $param = []): void
   {
+    AuthMiddleware::requireAdmin();
+
     $id = isset($param['id']) ? (int)$param['id'] : -1;
 
     if ($id <= -1) {
@@ -111,6 +116,8 @@ class PostsController
 
   public function update(array $param = []): void
   {
+    AuthMiddleware::requireAdmin();
+
     $id = isset($param['id']) ? (int)$param['id'] : -1;
 
     if ($id <= -1) {

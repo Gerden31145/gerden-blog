@@ -1,4 +1,7 @@
 <?php
+$loader = require __DIR__ . '/../vendor/autoload.php';
+$loader->addPsr4('App\\', __DIR__ . '/../src');
+
 require __DIR__ . '/../src/Core/Response.php';
 require __DIR__ . '/../src/Core/Router.php';
 require __DIR__ . '/../src/Lib/Parsedown.php';
@@ -8,12 +11,15 @@ require __DIR__ . '/../src/Core/Database.php';
 require __DIR__ . '/../src/Repositories/TagRepository.php';
 require __DIR__ . '/../src/Controllers/TagsController.php';
 require __DIR__ . '/../src/Repositories/PostsRepository.php';
+require __DIR__ . '/../src/Middleware/AuthMiddleware.php';
 require __DIR__ . '/../src/Controllers/PostsController.php';
+require __DIR__ . '/../src/Controllers/AuthController.php';
 
 use App\Core\Response;
 use App\Core\Router;
 
 header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
