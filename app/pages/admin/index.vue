@@ -36,21 +36,25 @@ import { ref } from 'vue'
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
 import type { modalStatusType } from '~/types/modal';
+import { useUsersStore } from '~/stores/users';
 
 definePageMeta({
-  layout:'default'
+  layout: 'default',
+  middleware: 'admin'
 })
 
 const { data, refresh } = await PostApi.getList()
 
 const list = computed<PostList[]>(() => data.value?.data ?? [])
+const usersStore = useUsersStore()
 
 const getData = () => {
   refresh()
 }
 
 const handleLogout = async () => {
-  navigateTo('/')
+  await usersStore.adminLogout()
+  await navigateTo('/')
 }
 
 const modalOpen = ref<boolean>(false)

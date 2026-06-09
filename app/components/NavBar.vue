@@ -15,10 +15,17 @@
           <NuxtLink to="/posts">POSTS</NuxtLink> 
         </div> 
         <div>|</div>
-        <div class="w-[30%] text-center"
-        :class="isActive('/works')?'font-extrabold':''" 
+        <div
+          class="w-[30%] text-center"
+          :class="isActive('/login') ? 'font-extrabold' : ''"
         >
-          <NuxtLink to="/works">WORK</NuxtLink>
+          <button
+            type="button"
+            class="cursor-pointer"
+            @click="handleAuthClick"
+          >
+            {{ usersStore.isLoggedIn ? 'LOGOUT' : 'LOGIN' }}
+          </button>
         </div>
         <div v-if="isAdmin">|</div>
         <div class="w-[30%]"
@@ -34,13 +41,26 @@
 
 <script lang="ts" setup>
 import { useRoute } from 'vue-router'
+import { useUsersStore } from '~/stores/users'
+
 const route = useRoute()
+const usersStore = useUsersStore()
 
 function isActive(prefix:string) {
   return route.path.startsWith(prefix+'/') || route.path === prefix
 }
 
-const isAdmin = true
+const handleAuthClick = async () => {
+  if (!usersStore.isLoggedIn) {
+    await navigateTo('/login')
+    return
+  }
+
+  await usersStore.logout()
+  await navigateTo('/login')
+}
+
+const isAdmin = computed(() => usersStore.isAdmin)
 
 </script>
 

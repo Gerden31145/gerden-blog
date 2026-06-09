@@ -22,8 +22,7 @@
     mt-5 cursor-pointer text-amber-50 p-2 text-lg w-full bg-text-primary rounded-xl
     hover:bg-[#3d4c5e] transition hover:text-white
     "
-    :disabled="isSubmiting" 
-    @click.prevent="handleSubmit"
+    :disabled="isSubmiting"
     >
       Login
     </button>
@@ -36,14 +35,32 @@
 
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
+import { useUsersStore } from '~/stores/users'
 
 definePageMeta({
-  layout:'blank'
+  layout: 'blank',
+  middleware: 'logged'
+})
+
+useHead({
+  title: 'Admin Login'
 })
 
 type User = {
   username:string
   password:string
+}
+
+type APIError = {
+  data?: {
+    message?: string
+  }
+  response?: {
+    _data?: {
+      message?: string
+    }
+  }
+  message?: string
 }
 
 const form = reactive<User>({
@@ -58,15 +75,25 @@ const pswError = ref<boolean>(false)
 const logError = ref<boolean>(false)
 const logMsg = ref<string>('')
 const logSuccess = ref<boolean>(false)
+const usersStore = useUsersStore()
 
 const validateUname = () => {
-  if (form.username === '' || form.username.length > 20) usernameError.value = true
+  if (form.username === '' || form.username.length > 64) usernameError.value = true
   else usernameError.value = false
 }
 
 const validatePsw = () => {
   if (form.password === '' || form.password.length > 30) pswError.value = true
   else pswError.value = false
+}
+
+const getErrorMessage = (error: unknown) => {
+  const apiError = error as APIError
+
+  return apiError.data?.message ||
+    apiError.response?._data?.message ||
+    apiError.message ||
+    'Login failed'
 }
 
 const handleSubmit = async () => {
@@ -79,9 +106,17 @@ const handleSubmit = async () => {
     isSubmiting.value = false
     return
   }
-  logSuccess.value = true
-  navigateTo('/admin')
-  isSubmiting.value = false
+
+  try {
+    await usersStore.adminLogin(form.username, form.password)
+    logSuccess.value = true
+    await navigateTo('/admin')
+  } catch (error) {
+    logError.value = true
+    logMsg.value = getErrorMessage(error)
+  } finally {
+    isSubmiting.value = false
+  }
 
 }
 

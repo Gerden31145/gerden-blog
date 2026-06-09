@@ -64,7 +64,8 @@ import { reactive, ref } from 'vue'
 import { loginAPI } from '~/services/login'
 
 definePageMeta({
-  layout: 'blank'
+  layout: 'blank',
+  middleware: 'logged'
 })
 
 useHead({

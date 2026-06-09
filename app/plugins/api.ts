@@ -1,3 +1,5 @@
+import { useUsersStore } from '~/stores/users'
+
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
 
@@ -6,15 +8,16 @@ export default defineNuxtPlugin(() => {
     credentials: 'include',
 
     onRequest({ request, options }) {
-      // 请求拦截器，用于添加token等 
     },
 
     onResponse() {
-      // 响应拦截器
     },
     onResponseError({ response }) {
       if (response.status === 401) {
-        console.log('响应错误！...')
+        if (import.meta.client) {
+          const usersStore = useUsersStore()
+          usersStore.clearUser()
+        }
       }
 
       console.log('响应错误！错误代码:', response.status, ' 错误内容:', response._data)

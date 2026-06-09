@@ -41,6 +41,16 @@ export const loginAPI = {
       }
     })
   },
+  me() {
+    const { $api } = useNuxtApp()
+
+    return $api<APIResponse<User>>('me')
+  },
+  adminMe() {
+    const { $api } = useNuxtApp()
+
+    return $api<APIResponse<User>>('admin/me')
+  },
   logout() {
     const { $api } = useNuxtApp()
 

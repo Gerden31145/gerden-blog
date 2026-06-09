@@ -44,10 +44,11 @@
 
 <script lang="ts" setup>
 import { reactive, ref } from 'vue'
-import { loginAPI } from '~/services/login'
+import { useUsersStore } from '~/stores/users'
 
 definePageMeta({
-  layout: 'blank'
+  layout: 'blank',
+  middleware: 'logged'
 })
 
 useHead({
@@ -83,6 +84,7 @@ const pswError = ref<boolean>(false)
 const logError = ref<boolean>(false)
 const logMsg = ref<string>('')
 const logSuccess = ref<boolean>(false)
+const usersStore = useUsersStore()
 
 const validateUname = () => {
   usernameError.value = form.username === '' || form.username.length > 64
@@ -114,7 +116,7 @@ const handleSubmit = async () => {
   }
 
   try {
-    await loginAPI.login(form.username, form.password)
+    await usersStore.login(form.username, form.password)
     logSuccess.value = true
     await navigateTo('/')
   } catch (error) {
