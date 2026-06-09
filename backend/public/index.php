@@ -11,8 +11,10 @@ require __DIR__ . '/../src/Core/Database.php';
 require __DIR__ . '/../src/Repositories/TagRepository.php';
 require __DIR__ . '/../src/Controllers/TagsController.php';
 require __DIR__ . '/../src/Repositories/PostsRepository.php';
+require __DIR__ . '/../src/Repositories/CommentsRepository.php';
 require __DIR__ . '/../src/Middleware/AuthMiddleware.php';
 require __DIR__ . '/../src/Controllers/PostsController.php';
+require __DIR__ . '/../src/Controllers/CommentsController.php';
 require __DIR__ . '/../src/Controllers/AuthController.php';
 
 use App\Core\Response;

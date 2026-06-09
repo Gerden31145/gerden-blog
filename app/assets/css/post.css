@@ -36,7 +36,8 @@
 
 .post pre {
   background-color: #ccdff7;
-  @apply rounded p-1.5 mt-1 mb-1
+  @apply rounded p-1.5 mt-1 mb-1;
+  white-space: break-spaces;
 }
 
 .post pre span.line {

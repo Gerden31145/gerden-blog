@@ -4,10 +4,14 @@ use App\Controller\healthController;
 use App\Controller\TagsController;
 use App\Controller\PostsController;
 use App\Controller\AuthController;
+use App\Controller\CommentsController;
 
 $router->addPath('/api/health', 'GET', [new healthController(), 'index']);
 $router->addPath('/api/tags', 'GET', [new TagsController(), 'index']);
 $router->addPath('/api/posts', 'GET', [new PostsController(), 'index']);
+$router->addPath('/api/posts/{id}/comments', 'GET', [new CommentsController(), 'index']);
+$router->addPath('/api/posts/{id}/comments', 'POST', [new CommentsController(), 'store']);
+$router->addPath('/api/comments/{id}', 'DELETE', [new CommentsController(), 'destroy']);
 $router->addPath('/api/posts/{slug}', 'GET', [new PostsController(), 'show']);
 $router->addPath('/api/register', 'POST', [new AuthController(), 'register']);
 $router->addPath('/api/login', 'POST', [new AuthController(), 'login']);

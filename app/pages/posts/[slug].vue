@@ -30,6 +30,13 @@
       <div v-else>
         <h1>文章正文加载失败</h1>
       </div>
+      <p v-if="isCommentsLoading" class="mt-8 text-sm opacity-70">Loading comments...</p>
+      <PostsPostComments
+        v-if="postDetail?.id"
+        :post-id="postDetail.id"
+        :comments="comments"
+        @refresh="refreshComments"
+      />
     </div>
   </div>
 </template>
@@ -37,7 +44,8 @@
 <script lang="ts" setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { PostApi } from '~/services/posts';
-import type { Posts } from '~/types/posts';
+import { CommentApi } from '~/services/comments';
+import type { CommentItem } from '~/types/comments';
 import { useRoute } from 'vue-router';
 
 const route = useRoute()
@@ -45,6 +53,18 @@ const route = useRoute()
 const {data} = await PostApi.getDetail(route.params.slug as string)
 
 const postDetail = data.value?.data
+const commentsResult = postDetail?.id
+  ? await CommentApi.getList(postDetail.id)
+  : null
+
+const comments = computed<CommentItem[]>(() => commentsResult?.data.value?.data ?? [])
+const isCommentsLoading = computed(() => commentsResult?.pending.value ?? false)
+
+const refreshComments = async () => {
+  if (!commentsResult) return
+
+  await commentsResult.refresh()
+}
 
 useHead({
   title:computed(() => postDetail?.title ?? '')
