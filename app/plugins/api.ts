@@ -3,6 +3,7 @@ export default defineNuxtPlugin(() => {
 
   const api = $fetch.create({
     baseURL: config.public.apiBase,
+    credentials: 'include',
 
     onRequest({ request, options }) {
       // 请求拦截器，用于添加token等 
