@@ -1,0 +1,41 @@
+<svg width="980" height="420" viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Project architecture</title>
+  <desc id="desc">Nuxt frontend communicates with a PHP backend, and the PHP backend uses MySQL.</desc>
+  <rect width="980" height="420" fill="#e7f2ff"/>
+  <text x="490" y="44" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#2d3c4e">Gerden Blog Architecture</text>
+
+  <rect x="70" y="100" width="240" height="190" rx="10" fill="#ffffff" stroke="#7fa5d3" stroke-width="3"/>
+  <text x="190" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2d3c4e">Nuxt Frontend</text>
+  <text x="190" y="176" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Vue 3 Pages</text>
+  <text x="190" y="202" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Pinia User Store</text>
+  <text x="190" y="228" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Tailwind CSS</text>
+  <text x="190" y="254" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">API Service Modules</text>
+
+  <rect x="370" y="100" width="240" height="190" rx="10" fill="#ffffff" stroke="#7fa5d3" stroke-width="3"/>
+  <text x="490" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2d3c4e">PHP Backend</text>
+  <text x="490" y="176" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Router</text>
+  <text x="490" y="202" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Controllers</text>
+  <text x="490" y="228" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Repositories</text>
+  <text x="490" y="254" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">JWT + Markdown Service</text>
+
+  <rect x="670" y="100" width="240" height="190" rx="10" fill="#ffffff" stroke="#7fa5d3" stroke-width="3"/>
+  <text x="790" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2d3c4e">MySQL</text>
+  <text x="790" y="176" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">posts</text>
+  <text x="790" y="202" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">tags / post_tags</text>
+  <text x="790" y="228" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">users</text>
+  <text x="790" y="254" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">comments</text>
+
+  <line x1="310" y1="195" x2="370" y2="195" stroke="#2d3c4e" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="610" y1="195" x2="670" y2="195" stroke="#2d3c4e" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="340" y="182" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#2d3c4e">HTTP API</text>
+  <text x="640" y="182" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#2d3c4e">PDO</text>
+
+  <rect x="250" y="330" width="480" height="42" rx="8" fill="#ffffff" stroke="#ff9f9b" stroke-width="2"/>
+  <text x="490" y="356" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#2d3c4e">Nitro server directory is disabled and ignored in this PHP version.</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2d3c4e"/>
+    </marker>
+  </defs>
+</svg>
