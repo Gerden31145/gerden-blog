@@ -104,8 +104,12 @@ Content processing:
 Authentication:
 
 - User table with `role`, `status`, and `token_version`
-- JWT stored in HttpOnly cookie
-- `token_version` comparison for logout/token invalidation
+- Access JWT stored in an HttpOnly cookie
+- Refresh token stored in an HttpOnly cookie and hashed in a D1-backed `sessions` table
+- JWT payload should include `sub`, `sid`, `role`, `tokenVersion`, and `exp`
+- Current-device logout revokes only the current session
+- All-device logout revokes all active sessions
+- `token_version` remains available for emergency/global user token invalidation
 - Admin permissions based on `role = 'admin'`
 
 Database:
@@ -185,7 +189,7 @@ Primary backend goals:
 2. Preserve existing blog, auth, admin, and comment behavior.
 3. Keep API response formats consistent.
 4. Use D1-compatible schema and queries only.
-5. Keep authentication based on HttpOnly JWT cookies and `token_version`.
+5. Keep authentication based on HttpOnly JWT cookies, D1-backed sessions, and `token_version` for global invalidation.
 6. Make the backend deployable to Cloudflare Workers.
 
 Primary frontend goals:

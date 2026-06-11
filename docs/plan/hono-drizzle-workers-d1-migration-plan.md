@@ -44,8 +44,9 @@ Final backend responsibilities:
 - Tags API.
 - User registration and login.
 - Admin login and admin-only post management.
-- JWT authentication through HttpOnly cookies.
-- `token_version` based token invalidation.
+- Session-aware JWT authentication through HttpOnly cookies.
+- D1-backed sessions for per-device logout.
+- `token_version` for emergency/global user token invalidation.
 - Comment list, creation, and logical deletion.
 - Markdown to HTML rendering.
 - TOC generation from rendered headings.
@@ -59,7 +60,7 @@ Final backend responsibilities:
 | Database | Cloudflare D1 | Serverless SQL database based on SQLite semantics |
 | ORM | Drizzle ORM | SQL-like, type-safe, works with D1 |
 | Validation | Zod | Request validation and typed payloads |
-| Auth | JWT + HttpOnly Cookie | Keeps frontend token handling simple and safer |
+| Auth | JWT + HttpOnly cookies + D1 sessions | Supports safer token handling and per-device logout |
 | Password hashing | Workers-compatible hashing strategy | Must avoid Node-only native modules |
 | Markdown | Pure JavaScript markdown pipeline | Must avoid Node-only or DOM-dependent libraries |
 
@@ -85,6 +86,7 @@ posts
 tags
 post_tags
 comments
+sessions
 ```
 
 The table names can remain close to the current backend to reduce frontend and service migration cost.
@@ -282,6 +284,18 @@ comments
 - status
 - created_at
 - updated_at
+
+sessions
+- id
+- user_id
+- refresh_token_hash
+- user_agent
+- ip_hash
+- status
+- created_at
+- last_used_at
+- expires_at
+- revoked_at
 ```
 
 Important D1 decisions:
@@ -338,9 +352,10 @@ Recommended JWT payload:
 ```ts
 type JwtPayload = {
   sub: number
-  username: string
+  sid: string
   role: 'user' | 'admin'
   tokenVersion: number
+  exp: number
 }
 ```
 
@@ -353,7 +368,7 @@ Deliverables:
 Acceptance criteria:
 
 - Route handlers do not manually duplicate response formatting.
-- Auth middleware can read cookie, verify JWT, query D1 user, and compare `token_version`.
+- Auth middleware can read cookie, verify JWT, query D1 user, compare `token_version`, and verify the D1 session.
 
 ## 10. Phase 4: Migrate Public Read APIs
 
@@ -411,9 +426,12 @@ Tasks:
 - Implement password hashing.
 - Implement login.
 - Implement admin login using the same user table and role check.
-- Implement JWT creation.
-- Store JWT in HttpOnly cookie.
-- Implement logout by increasing `token_version`.
+- Implement access JWT creation.
+- Implement opaque refresh token generation and hashing.
+- Store access and refresh tokens in HttpOnly cookies.
+- Create D1 session records on login.
+- Implement logout by revoking only the current session.
+- Keep `token_version` available for emergency/global invalidation.
 - Implement `/api/me` for normal login status.
 - Implement `/api/admin/me` for admin-only login status.
 
@@ -434,7 +452,8 @@ Acceptance criteria:
 
 - Normal user can register and log in.
 - Admin user can log in through admin login.
-- Logout invalidates old JWT through `token_version`.
+- Logout invalidates only the current session.
+- All-device logout can revoke all active sessions for the current user.
 - Disabled users cannot log in.
 - Non-admin users cannot access admin-only APIs.
 
@@ -726,7 +745,7 @@ After migration, the project can be described as:
 
 ```txt
 Built a Nuxt 3 personal blog and admin CMS with a standalone Hono backend deployed on Cloudflare Workers.
-Used Drizzle ORM with Cloudflare D1 to implement type-safe database access, JWT authentication with HttpOnly cookies and token versioning, Markdown rendering with TOC generation, post/tag/comment management, and role-based admin permissions.
+Used Drizzle ORM with Cloudflare D1 to implement type-safe database access, session-aware JWT authentication with HttpOnly cookies, per-device logout, Markdown rendering with TOC generation, post/tag/comment management, and role-based admin permissions.
 ```
 
 Frontend-focused highlight:
