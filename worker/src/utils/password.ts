@@ -65,8 +65,7 @@ export async function verifyPassword(password: string, stored: string) {
 
   const expected = fromBase64Url(expectedHash)
 
-  if (actual.length !== expected.length) return
-  false
+  if (actual.length !== expected.length) return false
 
   let diff = 0
   for (let i = 0; i < actual.length; i++) {

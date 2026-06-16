@@ -8,7 +8,7 @@ import type { AccessTokenPayload, PublicUser }
 export const ACCESS_COOKIE = 'access_token'
 export const REFRESH_COOKIE = 'refresh_token'
 
-const ACCESS_TTL = 60 * 15
+const ACCESS_TTL = 60 * 60
 const REFRESH_TTL = 60 * 60 * 24 * 30
 
 export function toPublicUser(user: {
