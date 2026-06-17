@@ -9,6 +9,8 @@ import type {
 } from '../types/post'
 import { slugify, uniqueSlug } from '../utils/slug'
 
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
+
 function parseToc(value: string): TocItem[] {
   try {
     const parsed = JSON.parse(value)
@@ -113,7 +115,7 @@ export async function findAdminPostById(db: Db, id: number) {
 }
 
 export async function createPostWithTags(db: Db, input: CreatePostInput) {
-  return db.transaction(async (tx) => {
+  const id = await db.transaction(async (tx) => {
     const [post] = await tx
       .insert(posts)
       .values({
@@ -124,7 +126,7 @@ export async function createPostWithTags(db: Db, input: CreatePostInput) {
         contentHtml: input.contentHTML,
         toc: input.toc,
         postStatus: input.post_status,
-        publishedAt: input.published_at
+        publishedAt: input.published_at ?? null
       })
       .returning()
 
@@ -134,15 +136,19 @@ export async function createPostWithTags(db: Db, input: CreatePostInput) {
     await tx.update(posts)
       .set({
         slug,
-        publishedAt: new Date().toISOString()
+        publishedAt: input.published_at ? new Date().toISOString() : null
       })
       .where(eq(posts.id, post.id))
 
-    return findAdminPostById(db, post.id)
+    await syncPostTags(tx, post.id, input.post_tags)
+
+    return post.id
   })
+
+  return findAdminPostById(db, id)
 }
 
-export async function updatePostWithTags(db: Db, input: UpdatePostInput, id: number) {
+export async function updatePostWithTags(db: Db, input: CreatePostInput, id: number) {
   await db.transaction(async (tx) => {
     await tx.update(posts).set({
       title: input.title,
@@ -155,10 +161,13 @@ export async function updatePostWithTags(db: Db, input: UpdatePostInput, id: num
       updatedAt: new
         Date().toISOString()
     })
+      .where(eq(posts.id, id))
 
     await tx.delete(postTags).where(eq(postTags.postId, id))
     await syncPostTags(tx, id, input.post_tags)
   })
+
+  return findAdminPostById(db, id)
 }
 
 export async function deletePostById(db: Db, id: number) {
@@ -167,7 +176,7 @@ export async function deletePostById(db: Db, id: number) {
 }
 
 // 将tag与post关联
-async function syncPostTags(tx: Db, postId: number, names: string[]) {
+async function syncPostTags(tx: Tx, postId: number, names: string[]) {
   const uniqueName = [
     ...new Set(names.map(tag => tag.trim()).filter(Boolean))
   ]

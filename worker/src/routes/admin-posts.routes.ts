@@ -20,9 +20,10 @@ const postSchema = z.object({
   summary:
     z.string().trim().max(500).optional(),
   content: z.string().min(1),
-  postStatus: z.enum(['draft', 'published', 'hidden']),
-  tags:
-    z.array(z.string().trim().min(1).max(40)).default([])
+  post_status: z.enum(['draft', 'published', 'hidden']),
+  post_tags:
+    z.array(z.string().trim().min(1).max(40)).default([]),
+  published_at: z.iso.date()
 })
 
 adminPostsRoutes.post('/admin/posts', requireAdmin, async (c) => {

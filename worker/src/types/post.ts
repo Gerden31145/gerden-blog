@@ -47,16 +47,21 @@ export type CreatePostInput = {
   toc: string
 }
 
-export type UpdatePostInput = Pick<PostDetail,
-  'content' | 'title' | 'post_tags' | 'summary' | 'toc' | 'contentHTML' | 'post_status' | 'post_tags'
->
+export type UpdatePostInput = {
+  title: string
+  summary?: string
+  content: string
+  post_status: PostStatus
+  published_at: string | null
+  post_tags: string[]
+}
 
 export type AdminPostInput = {
   title: string
   summary?: string
   content: string
-  postStatus: PostStatus
-  tags: string[]
+  post_status: PostStatus
+  post_tags: string[]
 }
 
 export type AdminPostResult =

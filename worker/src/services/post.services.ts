@@ -1,5 +1,5 @@
 import type { Db } from '../db/client'
-import type { AdminPostInput } from
+import type { AdminPostInput, UpdatePostInput } from
   '../types/post'
 import { markdownToHTML } from './markdown.service'
 import { uniqueSlug } from '../utils/slug'
@@ -21,37 +21,33 @@ export async function createAdminPost(db: Db, input: AdminPostInput) {
     content: input.content,
     contentHTML: rendered.html,
     toc: JSON.stringify(rendered.toc),
-    post_status: input.postStatus,
-    published_at: input.postStatus ===
+    post_status: input.post_status,
+    published_at: input.post_status ===
       'published' ? now : null,
-    post_tags: input.tags
+    post_tags: input.post_tags
   })
 }
 
-export async function updateAdminPost(db: Db, id: number, input: AdminPostInput) {
+export async function updateAdminPost(db: Db, id: number, input: UpdatePostInput) {
   const existing = await findAdminPostById(db, id)
   if (!existing) throw new AppError(404, 'Not Found')
 
   const rendered = await markdownToHTML(input.content)
 
-  return updatePostWithTags(db, id, {
+  return updatePostWithTags(db, {
     title: input.title,
-    slug: input.title ===
-      existing.title
-      ? existing.slug
-      : uniqueSlug(input.title, id),
     summary: input.summary ?? '',
     content: input.content,
-    contentHtml: rendered.html,
+    contentHTML: rendered.html,
     toc: JSON.stringify(rendered.toc),
-    postStatus: input.postStatus,
-    publishedAt: input.postStatus ===
+    post_status: input.post_status,
+    published_at: input.post_status ===
       'published'
       ? existing.publishedAt ?? new
         Date().toISOString()
       : null,
-    tags: input.tags
-  })
+    post_tags: input.post_tags
+  }, id)
 }
 
 export async function
