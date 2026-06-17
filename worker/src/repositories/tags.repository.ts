@@ -29,3 +29,19 @@ export async function findPublicTags(db: Db): Promise<TagItem[]> {
 
   return Array.from(tagMap.values())
 }
+
+async function findTagsByName(db: Db, tagName: string): Promise<TagItem | null> {
+  const rows = db
+    .select()
+    .from(tags)
+    .where(eq(tags.name, tagName))
+
+  if (!rows) return null
+  return rows[0]
+}
+
+export async function findOrCreateTags(db: Db, tagsList: TagItem[]) {
+  for (const tag of tagsList) {
+    if (await bd)
+  }
+}

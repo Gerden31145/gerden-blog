@@ -3,8 +3,11 @@ import { posts, postTags, tags } from '../db/schema'
 import type { Db } from '../db/client'
 import type {
   PostDetail, PostListItem, PostStatus,
-  TocItem
+  TocItem, AdminPostInput, AdminPostResult,
+  CreatePostInput,
+  UpdatePostInput
 } from '../types/post'
+import { slugify, uniqueSlug } from '../utils/slug'
 
 function parseToc(value: string): TocItem[] {
   try {
@@ -99,3 +102,99 @@ export async function findPublishedPostBySlug(db: Db, slug: string): Promise<Pos
   }
 }
 
+export async function findAdminPostById(db: Db, id: number) {
+  const [post] = await db
+    .select()
+    .from(posts)
+    .where(eq(posts.id, id))
+    .limit(1)
+
+  return post ?? null
+}
+
+export async function createPostWithTags(db: Db, input: CreatePostInput) {
+  return db.transaction(async (tx) => {
+    const [post] = await tx
+      .insert(posts)
+      .values({
+        title: input.title,
+        slug: `pending-${crypto.randomUUID()}`,
+        summary: input.summary,
+        content: input.content,
+        contentHtml: input.contentHTML,
+        toc: input.toc,
+        postStatus: input.post_status,
+        publishedAt: input.published_at
+      })
+      .returning()
+
+    const baseSlug = slugify(input.title)
+    const slug = uniqueSlug(baseSlug, post.id)
+
+    await tx.update(posts)
+      .set({
+        slug,
+        publishedAt: new Date().toISOString()
+      })
+      .where(eq(posts.id, post.id))
+
+    return findAdminPostById(db, post.id)
+  })
+}
+
+export async function updatePostWithTags(db: Db, input: UpdatePostInput, id: number) {
+  await db.transaction(async (tx) => {
+    await tx.update(posts).set({
+      title: input.title,
+      summary: input.summary,
+      content: input.content,
+      contentHtml:
+        input.contentHTML,
+      toc: input.toc,
+      postStatus: input.post_status,
+      updatedAt: new
+        Date().toISOString()
+    })
+
+    await tx.delete(postTags).where(eq(postTags.postId, id))
+    await syncPostTags(tx, id, input.post_tags)
+  })
+}
+
+export async function deletePostById(db: Db, id: number) {
+  await
+    db.delete(posts).where(eq(posts.id, id))
+}
+
+// 将tag与post关联
+async function syncPostTags(tx: Db, postId: number, names: string[]) {
+  const uniqueName = [
+    ...new Set(names.map(tag => tag.trim()).filter(Boolean))
+  ]
+
+  for (const name of uniqueName) {
+    const slug = slugify(name)
+    await tx
+      .insert(tags)
+      .values({
+        name,
+        slug
+      })
+      .onConflictDoNothing()
+
+    const [tag] = await tx
+      .select()
+      .from(tags)
+      .where(eq(tags.name, name))
+
+    if (tag) {
+      await tx
+        .insert(postTags)
+        .values({
+          postId,
+          tagId: tag.id
+        })
+        .onConflictDoNothing()
+    }
+  }
+}
