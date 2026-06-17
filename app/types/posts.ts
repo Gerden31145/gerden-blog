@@ -32,12 +32,12 @@ export interface PostList {
 }
 
 export type editedPost = Pick<PostList, 'title' | 'summary' | 'tags'> & {
-  file?: File,
+  content: string
   post_status: 'published' | 'draft' | 'hidden'
 }
 
-export type updatedPost = PostList & {
-  file?: File
+export type updatedPost = Omit<PostList, 'published_at'> & {
+  content: string
 }
 
 export type PostSlugRedirect = {

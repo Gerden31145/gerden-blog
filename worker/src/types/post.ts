@@ -52,7 +52,6 @@ export type UpdatePostInput = {
   summary?: string
   content: string
   post_status: PostStatus
-  published_at: string | null
   post_tags: string[]
 }
 

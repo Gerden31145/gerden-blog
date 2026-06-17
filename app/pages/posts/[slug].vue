@@ -63,8 +63,8 @@ const {data} = await PostApi.getDetail(route.params.slug as string)
 
 const payload = data.value?.data
 
-if (isSlugRedirect(data)) {
-  await navigateTo(`/posts/${data.redirect_to}`,
+if (isSlugRedirect(payload)) {
+  await navigateTo(`/posts/${payload.redirect_to}`,
     {
       redirectCode:301,
       replace:true

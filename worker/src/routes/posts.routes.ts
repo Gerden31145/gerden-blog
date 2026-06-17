@@ -23,16 +23,18 @@ postsRoutes.get('/posts/:slug', async (c) => {
   const db = getDB(c.env)
   const slug = c.req.param('slug')
 
-  const newSlug = await getNewSlug(getDB(c.env), slug)
-  if (newSlug) {
-    return c.json({
-      data: newSlug,
-      status: 301,
-      message: 'Redirect'
-    })
-  }
-
   const post = await findPublishedPostBySlug(db, slug)
+
+  if (!post) {
+    const newSlug = await getNewSlug(getDB(c.env), slug)
+    if (newSlug) {
+      return c.json({
+        data: newSlug,
+        status: 301,
+        message: 'Redirect'
+      })
+    }
+  }
 
   if (!post) throw new AppError(404, '文章不存在')
 

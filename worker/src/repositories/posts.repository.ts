@@ -154,19 +154,27 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
     let newSlug
     if (post.title !== input.title) {
       // 更新slug，把旧的slug写入slug-redirect表
-      newSlug = uniqueSlug(slugify(input.title), id)
+      newSlug = post.title !== input.title ?
+        uniqueSlug(slugify(input.title), id) : post.slug
 
-      await tx.insert(postSlugRedirects).values({
-        oldSlug: post.slug,
-        postId: id,
-        createdAt: new Date().toISOString()
-      })
+      if (newSlug !== post.slug) {
+        // 避免主键冲突（新slug与旧slug重复）
+        await tx.delete(postSlugRedirects)
+          .where(eq(postSlugRedirects.oldSlug, newSlug))
+
+        await tx.insert(postSlugRedirects).values({
+          oldSlug: post.slug,
+          postId: id,
+          createdAt: new Date().toISOString()
+        })
+      }
     }
 
     await tx.update(posts).set({
       title: input.title,
       summary: input.summary,
       content: input.content,
+      slug: newSlug,
       contentHtml:
         input.contentHTML,
       toc: input.toc,
@@ -230,7 +238,9 @@ export async function getNewSlug(db: Db, slug: string) {
 
   const [post] = await db.select({
     newSlug: posts.slug
-  }).from(posts).where(eq(posts.id, oldSlug.postId))
+  }).from(posts).where(and(eq(posts.id, oldSlug.postId), eq(posts.postStatus, 'published')))
+
+  if (!post) return null
 
   return {
     redirect_to: post.newSlug
