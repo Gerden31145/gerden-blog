@@ -6,6 +6,7 @@ import { tagsRoutes } from './routes/tags.routes'
 import { postsRoutes } from './routes/posts.routes'
 import { authRoutes } from './routes/auth.routes'
 import { adminPostsRoutes } from './routes/admin-posts.routes'
+import { commentsRoutes } from './routes/comments.routes'
 import { success, error } from './utils/response'
 import { AppEnv } from './types/app'
 import { AppError } from './utils/error'
@@ -28,6 +29,7 @@ app.route('/api', tagsRoutes)
 app.route('/api', postsRoutes)
 app.route('/api', authRoutes)
 app.route('/api', adminPostsRoutes)
+app.route('/api', commentsRoutes)
 
 app.notFound((c) => {
   return c.json(error(404, 'Not found'), 404)

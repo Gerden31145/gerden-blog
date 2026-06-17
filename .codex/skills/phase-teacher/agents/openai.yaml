@@ -1,0 +1,4 @@
+interface:
+  display_name: "Phase Teacher"
+  short_description: "Guide phase-by-phase coding lessons"
+  default_prompt: "Use $phase-teacher to explain the next project phase before implementation."

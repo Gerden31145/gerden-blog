@@ -159,7 +159,8 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
       toc: input.toc,
       postStatus: input.post_status,
       updatedAt: new
-        Date().toISOString()
+        Date().toISOString(),
+      publishedAt: input.published_at
     })
       .where(eq(posts.id, id))
 
