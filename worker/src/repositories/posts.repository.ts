@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm'
-import { posts, postTags, tags } from '../db/schema'
+import { posts, postSlugRedirects, postTags, tags } from '../db/schema'
 import type { Db } from '../db/client'
 import type {
   PostDetail, PostListItem, PostStatus,
@@ -150,6 +150,19 @@ export async function createPostWithTags(db: Db, input: CreatePostInput) {
 
 export async function updatePostWithTags(db: Db, input: CreatePostInput, id: number) {
   await db.transaction(async (tx) => {
+    const post = await findAdminPostById(db, id)
+    let newSlug
+    if (post.title !== input.title) {
+      // 更新slug，把旧的slug写入slug-redirect表
+      newSlug = uniqueSlug(slugify(input.title), id)
+
+      await tx.insert(postSlugRedirects).values({
+        oldSlug: post.slug,
+        postId: id,
+        createdAt: new Date().toISOString()
+      })
+    }
+
     await tx.update(posts).set({
       title: input.title,
       summary: input.summary,
@@ -206,5 +219,20 @@ async function syncPostTags(tx: Tx, postId: number, names: string[]) {
         })
         .onConflictDoNothing()
     }
+  }
+}
+
+export async function getNewSlug(db: Db, slug: string) {
+  const [oldSlug] = await db.select().from(postSlugRedirects)
+    .where(eq(postSlugRedirects.oldSlug, slug))
+
+  if (!oldSlug) return null
+
+  const [post] = await db.select({
+    newSlug: posts.slug
+  }).from(posts).where(eq(posts.id, oldSlug.postId))
+
+  return {
+    redirect_to: post.newSlug
   }
 }

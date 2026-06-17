@@ -39,3 +39,7 @@ export type editedPost = Pick<PostList, 'title' | 'summary' | 'tags'> & {
 export type updatedPost = PostList & {
   file?: File
 }
+
+export type PostSlugRedirect = {
+  redirect_to: string
+}

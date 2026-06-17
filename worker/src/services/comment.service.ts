@@ -21,6 +21,7 @@ export async function removeComment(db: Db, commentId: number, user: AuthUser) {
 export async function getCommentsList(db: Db, postId: number): Promise<CommentItem[]> {
   const post = await findAdminPostById(db, postId)
   if (!post) throw new AppError(404, '文章不存在')
+  if (post.postStatus !== 'published') throw new AppError(400, '文章未公开')
 
   return findVisibleCommentsById(db, postId)
 }
@@ -28,6 +29,7 @@ export async function getCommentsList(db: Db, postId: number): Promise<CommentIt
 export async function createCommentById(db: Db, input: CreatedComment) {
   const post = await findAdminPostById(db, Number(input.post_id))
   if (!post) throw new AppError(404, '文章不存在')
+  if (post.postStatus !== 'published') throw new AppError(400, '文章未公开')
 
   return createComment(db, input)
 }

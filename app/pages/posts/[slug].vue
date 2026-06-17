@@ -47,12 +47,32 @@ import { PostApi } from '~/services/posts';
 import { CommentApi } from '~/services/comments';
 import type { CommentItem } from '~/types/comments';
 import { useRoute } from 'vue-router';
+import type { PostSlugRedirect } from '~/types/posts';
 
 const route = useRoute()
 
+function isSlugRedirect(data:unknown):data is PostSlugRedirect {
+  return Boolean(
+    data&&
+    typeof data === 'object' &&
+      'redirect_to' in data
+  )
+}
+
 const {data} = await PostApi.getDetail(route.params.slug as string)
 
-const postDetail = data.value?.data
+const payload = data.value?.data
+
+if (isSlugRedirect(data)) {
+  await navigateTo(`/posts/${data.redirect_to}`,
+    {
+      redirectCode:301,
+      replace:true
+    }
+  )
+}
+
+const postDetail = isSlugRedirect(payload) ? null :payload
 const commentsResult = postDetail?.id
   ? await CommentApi.getList(postDetail.id)
   : null

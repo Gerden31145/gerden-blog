@@ -1,13 +1,13 @@
 // 博客文章相关API模块
 import type { APIResponse } from "~/types/api";
-import type { PostList, Posts, editedPost, updatedPost } from "~/types/posts";
+import type { PostList, Posts, editedPost, updatedPost, PostSlugRedirect } from "~/types/posts";
 
 export const PostApi = {
   getList() { // 获取博客文章列表
     return useAPI<APIResponse<PostList[]>>('posts')
   },
   getDetail(slug: string) {
-    return useAPI<APIResponse<Posts>>(`posts/${slug}`)
+    return useAPI<APIResponse<Posts | PostSlugRedirect>>(`posts/${slug}`)
   },
   create(post: editedPost) {
     const { $api } = useNuxtApp()

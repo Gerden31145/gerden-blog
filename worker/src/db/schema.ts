@@ -99,3 +99,16 @@ export const sessions = sqliteTable('sessions', {
   uniqueIndex('sessions_refresh_token_hash_unique').on(table.refreshTokenHash),
   check('sessions_status_check', sql`${table.status} in ('active', 'revoked')`),
 ])
+
+export const postSlugRedirects =
+  sqliteTable('post_slug_redirects', {
+    oldSlug:
+      text('old_slug').primaryKey(),
+    postId: integer('post_id')
+      .notNull()
+      .references(() => posts.id,
+        { onDelete: 'cascade' }),
+    createdAt:
+      text('created_at').notNull().default
+        (sql`CURRENT_TIMESTAMP`)
+  })

@@ -6,6 +6,7 @@ import { AppError } from '../utils/error'
 import {
   findPublishedPostBySlug,
   findPublishedPosts,
+  getNewSlug
 } from '../repositories/posts.repository'
 
 export const postsRoutes = new Hono<AppEnv>()
@@ -21,6 +22,15 @@ postsRoutes.get('/posts', async (c) => {
 postsRoutes.get('/posts/:slug', async (c) => {
   const db = getDB(c.env)
   const slug = c.req.param('slug')
+
+  const newSlug = await getNewSlug(getDB(c.env), slug)
+  if (newSlug) {
+    return c.json({
+      data: newSlug,
+      status: 301,
+      message: 'Redirect'
+    })
+  }
 
   const post = await findPublishedPostBySlug(db, slug)
 
