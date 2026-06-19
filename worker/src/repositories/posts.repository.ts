@@ -1,15 +1,15 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import { posts, postSlugRedirects, postTags, tags } from '../db/schema'
 import type { Db } from '../db/client'
 import type {
   PostDetail, PostListItem, PostStatus,
-  TocItem, AdminPostInput, AdminPostResult,
-  CreatePostInput,
-  UpdatePostInput
+  TocItem, CreatePostInput
 } from '../types/post'
 import { slugify, uniqueSlug } from '../utils/slug'
+import { AppError } from '../utils/error'
 
-type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
+type D1BatchItem = BatchItem<'sqlite'>
 
 function parseToc(value: string): TocItem[] {
   try {
@@ -19,6 +19,55 @@ function parseToc(value: string): TocItem[] {
     console.error('Invalid toc JSON', err)
     return []
   }
+}
+
+function normalizeTagNames(names: string[]) {
+  return [...new Set(names.map((tag) => tag.trim()).filter(Boolean))]
+}
+
+function createPostSlug(title: string) {
+  return uniqueSlug(title, crypto.randomUUID().slice(0, 8))
+}
+
+function buildTagInsertStatements(db: Db, names: string[]): D1BatchItem[] {
+  return names.map((name) => db
+    .insert(tags)
+    .values({
+      name,
+      slug: slugify(name)
+    })
+    .onConflictDoNothing())
+}
+
+function buildCreatePostTagStatements(
+  db: Db,
+  postSlug: string,
+  names: string[]
+): D1BatchItem[] {
+  return names.map((name) => db
+    .insert(postTags)
+    .select(sql`
+      select ${posts.id}, ${tags.id}
+      from ${posts}, ${tags}
+      where ${posts.slug} = ${postSlug}
+        and ${tags.name} = ${name}
+    `)
+    .onConflictDoNothing())
+}
+
+function buildUpdatePostTagStatements(
+  db: Db,
+  postId: number,
+  names: string[]
+): D1BatchItem[] {
+  return names.map((name) => db
+    .insert(postTags)
+    .select(sql`
+      select ${postId}, ${tags.id}
+      from ${tags}
+      where ${tags.name} = ${name}
+    `)
+    .onConflictDoNothing())
 }
 
 export async function findPublishedPosts(db: Db): Promise<PostListItem[]> {
@@ -115,12 +164,14 @@ export async function findAdminPostById(db: Db, id: number) {
 }
 
 export async function createPostWithTags(db: Db, input: CreatePostInput) {
-  const id = await db.transaction(async (tx) => {
-    const [post] = await tx
-      .insert(posts)
+  const tagNames = normalizeTagNames(input.post_tags)
+  const slug = createPostSlug(input.title)
+
+  const statements: [D1BatchItem, ...D1BatchItem[]] = [
+    db.insert(posts)
       .values({
         title: input.title,
-        slug: `pending-${crypto.randomUUID()}`,
+        slug,
         summary: input.summary,
         content: input.content,
         contentHtml: input.contentHTML,
@@ -128,53 +179,54 @@ export async function createPostWithTags(db: Db, input: CreatePostInput) {
         postStatus: input.post_status,
         publishedAt: input.published_at ?? null
       })
-      .returning()
+      .returning({ id: posts.id }),
+    ...buildTagInsertStatements(db, tagNames),
+    ...buildCreatePostTagStatements(db, slug, tagNames)
+  ]
 
-    const baseSlug = slugify(input.title)
-    const slug = uniqueSlug(baseSlug, post.id)
+  const [insertResult] = await db.batch(statements)
+  const [post] = insertResult as { id: number }[]
 
-    await tx.update(posts)
-      .set({
-        slug,
-        publishedAt: input.published_at ? new Date().toISOString() : null
-      })
-      .where(eq(posts.id, post.id))
+  if (!post) throw new AppError(500, '文章创建失败')
 
-    await syncPostTags(tx, post.id, input.post_tags)
-
-    return post.id
-  })
-
-  return findAdminPostById(db, id)
+  return findAdminPostById(db, post.id)
 }
 
 export async function updatePostWithTags(db: Db, input: CreatePostInput, id: number) {
-  await db.transaction(async (tx) => {
-    const post = await findAdminPostById(db, id)
-    let newSlug
-    if (post.title !== input.title) {
-      // 更新slug，把旧的slug写入slug-redirect表
-      newSlug = post.title !== input.title ?
-        uniqueSlug(slugify(input.title), id) : post.slug
+  const post = await findAdminPostById(db, id)
+  if (!post) throw new AppError(404, '文章不存在')
 
-      if (newSlug !== post.slug) {
-        // 避免主键冲突（新slug与旧slug重复）
-        await tx.delete(postSlugRedirects)
+  const tagNames = normalizeTagNames(input.post_tags)
+  let newSlug: string | undefined
+  const statements: D1BatchItem[] = []
+
+  if (post.title !== input.title) {
+    // 更新 slug，把旧的 slug 写入 slug-redirect 表。
+    newSlug = createPostSlug(input.title)
+
+    if (newSlug !== post.slug) {
+      // 避免主键冲突（新 slug 与旧 slug 重复）。
+      statements.push(
+        db.delete(postSlugRedirects)
           .where(eq(postSlugRedirects.oldSlug, newSlug))
+      )
 
-        await tx.insert(postSlugRedirects).values({
+      statements.push(
+        db.insert(postSlugRedirects).values({
           oldSlug: post.slug,
           postId: id,
           createdAt: new Date().toISOString()
         })
-      }
+      )
     }
+  }
 
-    await tx.update(posts).set({
+  statements.push(
+    db.update(posts).set({
       title: input.title,
       summary: input.summary,
       content: input.content,
-      slug: newSlug,
+      slug: newSlug ?? post.slug,
       contentHtml:
         input.contentHTML,
       toc: input.toc,
@@ -184,10 +236,13 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
       publishedAt: input.published_at
     })
       .where(eq(posts.id, id))
+  )
 
-    await tx.delete(postTags).where(eq(postTags.postId, id))
-    await syncPostTags(tx, id, input.post_tags)
-  })
+  statements.push(db.delete(postTags).where(eq(postTags.postId, id)))
+  statements.push(...buildTagInsertStatements(db, tagNames))
+  statements.push(...buildUpdatePostTagStatements(db, id, tagNames))
+
+  await db.batch(statements as [D1BatchItem, ...D1BatchItem[]])
 
   return findAdminPostById(db, id)
 }
@@ -195,39 +250,6 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
 export async function deletePostById(db: Db, id: number) {
   await
     db.delete(posts).where(eq(posts.id, id))
-}
-
-// 将tag与post关联
-async function syncPostTags(tx: Tx, postId: number, names: string[]) {
-  const uniqueName = [
-    ...new Set(names.map(tag => tag.trim()).filter(Boolean))
-  ]
-
-  for (const name of uniqueName) {
-    const slug = slugify(name)
-    await tx
-      .insert(tags)
-      .values({
-        name,
-        slug
-      })
-      .onConflictDoNothing()
-
-    const [tag] = await tx
-      .select()
-      .from(tags)
-      .where(eq(tags.name, name))
-
-    if (tag) {
-      await tx
-        .insert(postTags)
-        .values({
-          postId,
-          tagId: tag.id
-        })
-        .onConflictDoNothing()
-    }
-  }
 }
 
 export async function getNewSlug(db: Db, slug: string) {

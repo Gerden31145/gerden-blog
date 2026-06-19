@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { healthRoutes } from './routes/health.routes'
-import { debugRoute } from './routes/debug.routes'
 import { tagsRoutes } from './routes/tags.routes'
 import { postsRoutes } from './routes/posts.routes'
 import { authRoutes } from './routes/auth.routes'
@@ -16,7 +15,11 @@ const app = new Hono<AppEnv>()
 
 app.use('/api/*',
   cors({
-    origin: 'http://localhost:3000',
+    origin: [
+      'https://gerden-blog.pages.dev',
+      'https://gerden-shop.cn',
+      'https://www.gerden-shop.cn'
+    ],
     credentials: true,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'OPTIONS', 'DELETE']
@@ -24,7 +27,6 @@ app.use('/api/*',
 )
 
 app.route('/api', healthRoutes)
-app.route('/api', debugRoute)
 app.route('/api', tagsRoutes)
 app.route('/api', postsRoutes)
 app.route('/api', authRoutes)

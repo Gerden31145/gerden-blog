@@ -43,6 +43,7 @@
 import { useRoute } from 'vue-router'
 import { useUsersStore } from '~/stores/users'
 
+const isAdmin = computed(() => usersStore.isAdmin)
 const route = useRoute()
 const usersStore = useUsersStore()
 
@@ -60,7 +61,6 @@ const handleAuthClick = async () => {
   await navigateTo('/login')
 }
 
-const isAdmin = computed(() => usersStore.isAdmin)
 
 </script>
 
