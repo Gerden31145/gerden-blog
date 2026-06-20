@@ -1,6 +1,5 @@
 name: Test VPS SSH
-
-  on:
+on:
     workflow_dispatch:
     push:
       branches:
@@ -8,10 +7,10 @@ name: Test VPS SSH
       paths:
         - ".github/workflows/test-vps-ssh.yml"
 
-  permissions:
+permissions:
     contents: read
 
-  jobs:
+jobs:
     connection-test:
       runs-on: ubuntu-latest
 
