@@ -1,0 +1,57 @@
+name: Test VPS SSH
+
+  on:
+    workflow_dispatch:
+    push:
+      branches:
+        - hono-migration
+      paths:
+        - ".github/workflows/test-vps-ssh.yml"
+
+  permissions:
+    contents: read
+
+  jobs:
+    connection-test:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Configure SSH
+          env:
+            SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+            SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          run: |
+            install -m 700 -d ~/.ssh
+
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+        - name: Test VPS connection
+          run: |
+            ssh \
+              -i ~/.ssh/id_ed25519 \
+              -p "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" \
+              "
+                set -eu
+
+                test \"\$(whoami)\" = 'deploy'
+                test -w '${{ vars.VPS_DEPLOY_PATH }}'
+
+                export PATH='/home/deploy/.nvm/versions/node/v24.7.0/bin':\$PATH
+                export PM2_HOME='/home/deploy/.pm2'
+
+                pm2 describe '${{ vars.PM2_APP_NAME }}' >/dev/null
+                curl --fail --silent http://127.0.0.1:3000 >/dev/null
+
+                echo 'SSH connection succeeded'
+                echo 'User:' \"\$(whoami)\"
+                echo 'PM2 app:' '${{ vars.PM2_APP_NAME }}'
+                echo 'Nuxt health check: OK'
+              "
