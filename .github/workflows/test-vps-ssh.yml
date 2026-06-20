@@ -83,3 +83,28 @@ jobs:
                 echo 'PM2 app:' '${{ vars.PM2_APP_NAME }}'
                 echo 'Nuxt health check: OK'
               "
+              
+        - name: Upload package to VPS
+          run: |
+            REMOTE_ARCHIVE="${{ vars.VPS_DEPLOY_PATH }}/.deploy/nuxt-${GITHUB_RUN_ID}.tar.gz"
+
+            scp \
+              -i ~/.ssh/id_ed25519 \
+              -P "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              nuxt-output.tar.gz \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:$REMOTE_ARCHIVE"
+
+            ssh \
+              -i ~/.ssh/id_ed25519 \
+              -p "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" \
+              "test -s '$REMOTE_ARCHIVE' &&
+               tar -tzf '$REMOTE_ARCHIVE' '.output/server/index.mjs' >/dev/null"
+
+            echo "Package uploaded and verified: $REMOTE_ARCHIVE"
