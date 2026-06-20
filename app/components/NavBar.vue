@@ -1,6 +1,8 @@
 <template>
-  <div class="font-serif py-3 flex text-text-primary justify-between mt-4">
-    <div class="text-3xl">GDB</div>
+  <div class="font-serif py-3 flex text-text-primary justify-between mt-4 items-center mb-6">
+    <div class="text-3xl">
+      <img src="/icon.svg" class=" h-12">
+    </div>
     <div class="w-[50%]">
       <div class="flex gap-4 w-[100%]">
         <div class="w-[30%] text-center"
