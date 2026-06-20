@@ -15,6 +15,35 @@ jobs:
       runs-on: ubuntu-latest
 
       steps:
+        - name: Checkout source
+          uses: actions/checkout@v4
+
+        - name: Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: "24.7.0"
+            cache: npm
+
+        - name: Install dependencies
+          run: npm ci
+
+        - name: Build Nuxt
+          env:
+            NUXT_PUBLIC_API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
+          run: npm run build
+
+        - name: Verify and package output
+          run: |
+            test -f .output/server/index.mjs
+            tar -czf nuxt-output.tar.gz .output
+
+        - name: Upload build artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: nuxt-output
+            path: nuxt-output.tar.gz
+            retention-days: 3
+
         - name: Configure SSH
           env:
             SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
