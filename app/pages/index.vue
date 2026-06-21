@@ -3,7 +3,7 @@
     <title>Gerden Blog - Welcome</title>
     <section class="font-serif">
       <h1 class="text-5xl tracking-tight">Welcome to Gerden Blog!</h1>
-      <p class="mt-5 text-3xl leading-snug tracking-tight">
+      <p class="mt-5 text-3xl leading-snug tracking-tight wrap-break-word">
         Here, I record my daily study notes and ideas about programming, technology, and the web.
       </p>
     </section>
