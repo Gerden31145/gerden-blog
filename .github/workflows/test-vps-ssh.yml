@@ -4,8 +4,6 @@ on:
     push:
       branches:
         - hono-migration
-      paths:
-        - ".github/workflows/test-vps-ssh.yml"
 
 permissions:
     contents: read
