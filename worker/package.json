@@ -7,7 +7,9 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply gerden-blog-db --local",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:seed:local": "wrangler d1 execute gerden-blog-db --local --file=./seeds/local.sql",
+    "db:sql:local": "wrangler d1 execute gerden-blog-db --local --command"
   },
   "dependencies": {
     "@shikijs/rehype": "^4.2.0",

@@ -1,6 +1,8 @@
 <template>
   <div class="font-serif relative">
-    <nav v-if="postDetail?.toc?.length" class="toc-sidebar">
+    <nav v-if="postDetail?.toc?.length" class="
+    hidden lg:block
+    toc-sidebar">
       <h3 class="toc-title">TOC</h3>
       <ul class="toc-list">
         <li

@@ -16,6 +16,7 @@ const app = new Hono<AppEnv>()
 app.use('/api/*',
   cors({
     origin: [
+      'http://localhost:3000',
       'https://gerden-blog.pages.dev',
       'https://gerden-shop.cn',
       'https://www.gerden-shop.cn'
