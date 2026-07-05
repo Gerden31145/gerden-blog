@@ -36,6 +36,18 @@ Services
   | Drizzle queries
   v
 Cloudflare D1
+
+Admin post rendering path:
+
+Hono Worker
+  |
+  | enqueue render job
+  v
+Cloudflare Queue
+  |
+  | queue consumer renders Markdown
+  v
+Cloudflare D1
 ```
 
 Final backend responsibilities:
@@ -50,6 +62,7 @@ Final backend responsibilities:
 - Comment list, creation, and logical deletion.
 - Markdown to HTML rendering.
 - TOC generation from rendered headings.
+- Asynchronous Markdown rendering for large admin post create/update workflows.
 
 ## 3. Main Technology Choices
 
@@ -63,6 +76,7 @@ Final backend responsibilities:
 | Auth | JWT + HttpOnly cookies + D1 sessions | Supports safer token handling and per-device logout |
 | Password hashing | Workers-compatible hashing strategy | Must avoid Node-only native modules |
 | Markdown | Pure JavaScript markdown pipeline | Must avoid Node-only or DOM-dependent libraries |
+| Background jobs | Cloudflare Queues | Keeps CPU-heavy Markdown rendering out of the request path |
 
 ## 4. Important Migration Difference: MySQL to D1
 
@@ -105,6 +119,7 @@ Phase 7: Migrate comments APIs
 Phase 8: Connect Nuxt frontend to the new backend
 Phase 9: Deploy to Cloudflare
 Phase 10: Remove PHP/MySQL legacy backend
+Phase 11: Introduce Cloudflare Queues for asynchronous Markdown rendering
 ```
 
 ## 6. Phase 0: Preparation and API Contract Freeze
@@ -513,6 +528,11 @@ Acceptance criteria:
 - Admin can delete a post.
 - Tags and `post_tags` remain consistent after updates.
 
+Known follow-up:
+
+- Large Markdown posts with many code blocks can exceed Worker CPU limits if rendered synchronously in the admin request path.
+- Move Markdown rendering to Cloudflare Queues in Phase 11 after the basic admin workflow is working.
+
 ## 13. Phase 7: Migrate Comments APIs
 
 Purpose: restore comment functionality and permissions.
@@ -613,6 +633,7 @@ Worker environment variables / secrets
 Optional future resources:
 
 ```txt
+Cloudflare Queues for asynchronous Markdown rendering
 Cloudflare R2 for images or uploaded assets
 Cloudflare Pages for frontend deployment
 ```
@@ -666,7 +687,102 @@ Final acceptance criteria:
 - No final documentation describes PHP/MySQL as the active backend.
 - `server/*` remains ignored as a legacy Nuxt Nitro API area unless intentionally reintroduced.
 
-## 17. Suggested Timeline
+## 17. Phase 11: Introduce Cloudflare Queues for Async Markdown Rendering
+
+Purpose: turn the real production CPU-limit issue from admin post uploads into a backend asynchronous architecture practice.
+
+Problem to solve:
+
+- `POST /api/admin/posts` currently performs Markdown parsing, HTML sanitization, TOC extraction, and Shiki code highlighting synchronously.
+- Large posts can trigger Cloudflare Worker `exceededCpu` and return `503`.
+- The user-facing request should save the post quickly and let a background consumer do CPU-heavy rendering.
+
+Target flow:
+
+```txt
+POST /api/admin/posts
+  -> validate admin payload
+  -> save Markdown and metadata to D1
+  -> set render_status = 'pending'
+  -> enqueue { postId, contentHash, jobType }
+  -> return success
+
+Queue consumer
+  -> read latest post content from D1
+  -> compare contentHash for idempotency
+  -> render Markdown to HTML and TOC
+  -> update content_html, toc, render_status, rendered_at
+  -> retry or mark failed on render error
+```
+
+Recommended design decisions:
+
+- Use Cloudflare Queues instead of Redis + BullMQ for this project because the backend target is Workers + D1, not a long-running Node.js service.
+- Keep Queue messages small. Send IDs and hashes, not the full Markdown body.
+- Store render state in D1 so the admin UI can show `pending`, `rendering`, `ready`, and `failed`.
+- Use `contentHash` to prevent old queue jobs from overwriting newer edits.
+- Treat Queue delivery as at-least-once and make the consumer idempotent.
+- Keep the synchronous Markdown renderer available only as an internal utility used by the consumer.
+
+Suggested schema additions:
+
+```txt
+posts
+- render_status
+- render_error
+- content_hash
+- rendered_at
+
+render_jobs
+- id
+- post_id
+- job_type
+- content_hash
+- status
+- attempts
+- last_error
+- created_at
+- updated_at
+```
+
+Suggested files:
+
+```txt
+worker/src/types/render-job.ts
+worker/src/services/render-job.service.ts
+worker/src/repositories/render-jobs.repository.ts
+worker/src/queues/render-post.consumer.ts
+worker/src/utils/hash.ts
+worker/wrangler.jsonc
+```
+
+Tasks:
+
+- Add Cloudflare Queue binding and consumer configuration in Wrangler.
+- Add D1 migration for render status/job tracking.
+- Change admin create/update routes to save Markdown first and enqueue a render job.
+- Implement queue consumer for Markdown rendering.
+- Add idempotency checks with `contentHash`.
+- Add retry/failure handling and structured logs.
+- Update frontend admin post management to display render status.
+- Document how to inspect Queue failures and failed render jobs.
+
+Deliverables:
+
+- Admin post create/update no longer performs heavy Markdown rendering in the request path.
+- Cloudflare Queue consumer renders `content_html` and `toc`.
+- D1 records render status and render errors.
+- Admin UI can distinguish saved, rendering, ready, and failed states.
+
+Acceptance criteria:
+
+- A large Markdown post no longer returns `503 exceededCpu` from `POST /api/admin/posts`.
+- Queue consumer can render the post and update D1.
+- Re-sending or retrying the same queue message does not corrupt the post.
+- Editing a post twice quickly does not allow an older render job to overwrite the newer result.
+- Failed renders are visible in logs and in D1 state.
+
+## 18. Suggested Timeline
 
 | Day | Work |
 | --- | --- |
@@ -677,10 +793,11 @@ Final acceptance criteria:
 | Day 5 | Phase 6: admin post create/update/delete |
 | Day 6 | Phase 7 and Phase 8: comments and frontend integration |
 | Day 7 | Phase 9 and Phase 10: deployment, cleanup, documentation update |
+| Day 8 | Phase 11: Cloudflare Queues async Markdown rendering practice |
 
 This timeline assumes the frontend UI does not receive major redesign work during the backend migration. If the post editor is changed from file upload to JSON Markdown editing, reserve extra time for frontend editor cleanup.
 
-## 18. Risk List
+## 19. Risk List
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
@@ -688,10 +805,11 @@ This timeline assumes the frontend UI does not receive major redesign work durin
 | Workers runtime differs from Node.js | Some packages may not run | Choose pure JS or Web API compatible libraries |
 | Cookie auth in cross-origin dev | Login appears successful but session is lost | Test CORS, credentials, SameSite, Secure settings early |
 | Markdown rendering libraries may need DOM APIs | Runtime error in Workers | Use a pure JS markdown pipeline |
+| Large Markdown rendering exceeds Worker CPU | Admin post upload can return 503 | Move rendering to Cloudflare Queues and make jobs idempotent |
 | Password hashing compatibility | Native bcrypt may fail | Choose Workers-compatible password hashing |
 | Large migration scope | Easy to break existing frontend | Migrate route by route and keep API shape stable |
 
-## 19. Testing Checklist
+## 20. Testing Checklist
 
 Public APIs:
 
@@ -719,6 +837,14 @@ Admin APIs:
 - Update tags.
 - Delete post.
 
+Async rendering:
+
+- Create a large Markdown post with many code blocks.
+- Confirm admin create/update returns before Markdown rendering completes.
+- Confirm Queue consumer writes `content_html` and `toc`.
+- Confirm stale render jobs do not overwrite newer content.
+- Confirm failed render jobs store an error and do not publish partial HTML.
+
 Comments APIs:
 
 - List visible comments.
@@ -739,7 +865,7 @@ Frontend flows:
 - Admin post create/update/delete.
 - Comment create/delete.
 
-## 20. Resume-Oriented Project Highlights
+## 21. Resume-Oriented Project Highlights
 
 After migration, the project can be described as:
 
@@ -757,5 +883,5 @@ Implemented a Nuxt 3 frontend with Pinia-based user state, route middleware auth
 Backend-focused highlight:
 
 ```txt
-Migrated a PHP + MySQL backend to a serverless TypeScript architecture using Hono, Drizzle ORM, Cloudflare Workers, and D1.
+Migrated a PHP + MySQL backend to a serverless TypeScript architecture using Hono, Drizzle ORM, Cloudflare Workers, D1, and Cloudflare Queues for asynchronous Markdown rendering.
 ```
