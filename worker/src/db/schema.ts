@@ -33,6 +33,10 @@ export const posts = sqliteTable('posts', {
   toc: text('toc').notNull().default('[]'),
   postStatus: text('post_status').notNull().default('draft'),
   publishedAt: text('published_at'),
+  renderStatus: text('render_status').notNull().default('ready'),
+  renderError: text('render_error'),
+  contentHash: text('content_hash').notNull().default(''),
+  renderedAt: text('rendered_at'),
   createdAt:
     text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt:
@@ -62,6 +66,18 @@ export const postTags = sqliteTable('post_tags', {
 }, (table) => [
   primaryKey({ columns: [table.postId, table.tagId] }),
 ])
+
+export const renderJobs = sqliteTable('render_jobs', {
+  id: text('id').primaryKey(),
+  postId: integer().notNull(),
+  jobType: text('job_type').notNull(),
+  contentHash: text('content_hash').notNull(),
+  status: text().notNull(),
+  attempts: integer(),
+  lastError: text('last_error'),
+  createdAt: text(),
+  updatedAt: text()
+})
 
 export const comments = sqliteTable('comments', {
   id: integer('id').primaryKey({ autoIncrement: true }),

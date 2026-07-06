@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
-import { posts, postSlugRedirects, postTags, tags } from '../db/schema'
+import { posts, postSlugRedirects, postTags, renderJobs, tags } from '../db/schema'
 import type { Db } from '../db/client'
 import type {
   PostDetail, PostListItem, PostStatus,
@@ -70,6 +70,30 @@ function buildUpdatePostTagStatements(
     .onConflictDoNothing())
 }
 
+function buildRenderQueueMessageStatements(
+  db: Db,
+  jobId: string,
+  postSlug: string,
+  contentHash: string
+): D1BatchItem {
+  return db.insert(renderJobs)
+    .select(
+      sql`
+        select
+        ${jobId},
+        ${posts.id},
+        'post_render',
+        ${contentHash},
+        'queued',
+        0,
+        null,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+        from ${posts}
+        where ${posts.slug} = ${postSlug}
+      `)
+}
+
 export async function findPublishedPosts(db: Db): Promise<PostListItem[]> {
   const rows = await db.select({
     id: posts.id,
@@ -83,7 +107,9 @@ export async function findPublishedPosts(db: Db): Promise<PostListItem[]> {
     .from(posts)
     .leftJoin(postTags, eq(posts.id, postTags.postId))
     .leftJoin(tags, eq(postTags.tagId, tags.id))
-    .where(eq(posts.postStatus, 'published'))
+    .where(
+      and(eq(posts.postStatus, 'published'), eq(posts.renderStatus, 'ready'))
+    )
 
   const postMap = new Map<number, PostListItem>()
 
@@ -129,7 +155,8 @@ export async function findPublishedPostBySlug(db: Db, slug: string): Promise<Pos
     .leftJoin(tags, eq(tags.id, postTags.tagId))
     .where(and(
       eq(posts.slug, slug),
-      eq(posts.postStatus, 'published')
+      eq(posts.postStatus, 'published'),
+      eq(posts.renderStatus, 'ready')
     ))
 
   if (rows.length === 0) return null
@@ -163,7 +190,10 @@ export async function findAdminPostById(db: Db, id: number) {
   return post ?? null
 }
 
-export async function createPostWithTags(db: Db, input: CreatePostInput) {
+export async function createPostWithTags(db: Db,
+  input: CreatePostInput,
+  jobId: string
+) {
   const tagNames = normalizeTagNames(input.post_tags)
   const slug = createPostSlug(input.title)
 
@@ -177,11 +207,14 @@ export async function createPostWithTags(db: Db, input: CreatePostInput) {
         contentHtml: input.contentHTML,
         toc: input.toc,
         postStatus: input.post_status,
-        publishedAt: input.published_at ?? null
+        publishedAt: input.published_at ?? null,
+        contentHash: input.content_hash,
+        renderStatus: 'pending'
       })
       .returning({ id: posts.id }),
     ...buildTagInsertStatements(db, tagNames),
-    ...buildCreatePostTagStatements(db, slug, tagNames)
+    ...buildCreatePostTagStatements(db, slug, tagNames),
+    buildRenderQueueMessageStatements(db, jobId, slug, input.content_hash)
   ]
 
   const [insertResult] = await db.batch(statements)

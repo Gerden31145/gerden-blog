@@ -1,3 +1,5 @@
+import { RenderStatus } from "./render-job"
+
 export type PostStatus = 'draft' | 'published' |
   'hidden'
 
@@ -44,7 +46,8 @@ export type CreatePostInput = {
   post_status: PostStatus
   published_at: string | null
   post_tags: string[]
-  toc: string
+  toc: string,
+  content_hash: string,
 }
 
 export type UpdatePostInput = {

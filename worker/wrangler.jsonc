@@ -43,6 +43,22 @@
 			"persist": true,
 			"head_sampling_rate": 1
 		}
+	},
+	"queues": {
+		"producers": [
+			{
+				"binding": "POST_RENDER_QUEUE",
+				"queue": "post-render-queue"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "post-render-queue",
+				"max_batch_size": 1,
+				"max_batch_timeout": 1,
+				"max_retries": 3
+			}
+		]
 	}
 	// "ai": {
 	//   "binding": "AI"
