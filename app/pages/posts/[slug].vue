@@ -76,7 +76,10 @@ if (isSlugRedirect(payload)) {
 
 const postDetail = isSlugRedirect(payload) ? null :payload
 const commentsResult = postDetail?.id
-  ? await CommentApi.getList(postDetail.id)
+  ? CommentApi.getList(postDetail.id, {
+    server:false,
+    lazy:true,
+  })
   : null
 
 const comments = computed<CommentItem[]>(() => commentsResult?.data.value?.data ?? [])
