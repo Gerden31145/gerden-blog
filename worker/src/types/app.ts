@@ -1,3 +1,5 @@
+import { RenderPostMessage } from "./render-job";
+
 export type UserRole = 'user' | 'admin'
 
 export type AuthUser = {
@@ -7,8 +9,9 @@ export type AuthUser = {
   tokenVersion: number;
 }
 
-export type AppBindings = CloudflareBindings & {
-  JWT_SECRET: string
+export type AppBindings = Omit<CloudflareBindings, 'POST_RENDER_QUEUE'> & {
+  JWT_SECRET: string,
+  POST_RENDER_QUEUE: Queue<RenderPostMessage>
 }
 
 export type AppEnv = {

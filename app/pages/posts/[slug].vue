@@ -92,6 +92,10 @@ useHead({
   title:computed(() => postDetail?.title ?? '')
 })
 
+useSeoMeta({
+  description:postDetail?.summary ?? ''
+})
+
 
 const activeTocId = ref<string>('')
 

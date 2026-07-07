@@ -1,6 +1,5 @@
 <template>
   <div class="text-text-primary">
-    <title>Gerden Blog - Welcome</title>
     <section class="font-serif">
       <h1 class="text-5xl tracking-tight">Welcome to Gerden Blog!</h1>
       <p class="mt-5 text-3xl leading-snug tracking-tight wrap-break-word">
@@ -42,7 +41,10 @@
 </template>
 
 <script lang="ts" setup>
-
+useSeoMeta({
+  title:'Gerden Blog - Welcome',
+  description:"Gerden's personal blog about frontend development, programming, technology and AI-assisted learning."
+})
 </script>
 
 <style>
