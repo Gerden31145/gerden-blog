@@ -1,7 +1,7 @@
 <template>
   <div class="font-serif py-3 flex flex-wrap text-text-primary justify-between mt-4 items-center mb-6">
     <div class="text-3xl">
-      <img src="/icon.svg" class=" h-12">
+      <img src="/icon.svg" class=" h-12" alt="Gerden Blog logo">
     </div>
     <div>
       <div class="flex gap-4 w-full">
