@@ -1,9 +1,13 @@
+import type { UseFetchOptions } from '#app'
 import type { APIResponse } from '~/types/api'
 import type { CommentItem } from '~/types/comments'
 
 export const CommentApi = {
-  getList(postId: string) {
-    return useAPI<APIResponse<CommentItem[]>>(`posts/${postId}/comments`)
+  getList(
+    postId: string,
+    options: UseFetchOptions<APIResponse<CommentItem[]>>
+  ) {
+    return useAPI<APIResponse<CommentItem[]>>(`posts/${postId}/comments`, options)
   },
 
   create(postId: string, content: string) {

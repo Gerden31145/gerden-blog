@@ -1,0 +1,190 @@
+name: Test VPS SSH
+on:
+    workflow_dispatch:
+    push:
+      branches:
+        - hono-migration
+
+permissions:
+    contents: read
+
+jobs:
+    connection-test:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout source
+          uses: actions/checkout@v4
+
+        - name: Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: "24.7.0"
+            cache: npm
+
+        - name: Install dependencies
+          run: npm ci
+
+        - name: Build Nuxt
+          env:
+            NUXT_PUBLIC_API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
+          run: npm run build
+
+        - name: Verify and package output
+          run: |
+            test -f .output/server/index.mjs
+            tar -czf nuxt-output.tar.gz .output
+
+        - name: Upload build artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: nuxt-output
+            path: nuxt-output.tar.gz
+            retention-days: 3
+
+        - name: Configure SSH
+          env:
+            SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+            SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          run: |
+            install -m 700 -d ~/.ssh
+
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+
+        - name: Test VPS connection
+          run: |
+            ssh \
+              -i ~/.ssh/id_ed25519 \
+              -p "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" \
+              "
+                set -eu
+
+                test \"\$(whoami)\" = 'deploy'
+                test -w '${{ vars.VPS_DEPLOY_PATH }}'
+
+                export PATH='/home/deploy/.nvm/versions/node/v24.7.0/bin':\$PATH
+                export PM2_HOME='/home/deploy/.pm2'
+
+                pm2 describe '${{ vars.PM2_APP_NAME }}' >/dev/null
+                curl --fail --silent http://127.0.0.1:3000 >/dev/null
+
+                echo 'SSH connection succeeded'
+                echo 'User:' \"\$(whoami)\"
+                echo 'PM2 app:' '${{ vars.PM2_APP_NAME }}'
+                echo 'Nuxt health check: OK'
+              "
+
+        - name: Upload package to VPS
+          run: |
+            REMOTE_ARCHIVE="${{ vars.VPS_DEPLOY_PATH }}/.deploy/nuxt-${GITHUB_RUN_ID}.tar.gz"
+
+            scp \
+              -i ~/.ssh/id_ed25519 \
+              -P "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              nuxt-output.tar.gz \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:$REMOTE_ARCHIVE"
+
+            ssh \
+              -i ~/.ssh/id_ed25519 \
+              -p "${{ vars.VPS_PORT }}" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" \
+              "test -s '$REMOTE_ARCHIVE' &&
+               tar -tzf '$REMOTE_ARCHIVE' '.output/server/index.mjs' >/dev/null"
+
+            echo "Package uploaded and verified: $REMOTE_ARCHIVE"
+
+        - name: Activate Nuxt release
+          env:
+            VPS_HOST: ${{ vars.VPS_HOST }}
+            VPS_PORT: ${{ vars.VPS_PORT }}
+            VPS_USER: ${{ vars.VPS_USER }}
+            DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+            PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+            API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
+          run: |
+            RELEASE_ID="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            ARCHIVE_NAME="nuxt-${GITHUB_RUN_ID}.tar.gz"
+
+            ssh \
+              -i ~/.ssh/id_ed25519 \
+              -p "$VPS_PORT" \
+              -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              "$VPS_USER@$VPS_HOST" \
+              "bash -s -- '$DEPLOY_PATH' '$PM2_APP_NAME' '$API_BASE' '$RELEASE_ID' '$ARCHIVE_NAME'"<<'REMOTE'
+            set -eu
+
+            DEPLOY_PATH="$1"
+            PM2_APP_NAME="$2"
+            API_BASE="$3"
+            RELEASE_ID="$4"
+            ARCHIVE_NAME="$5"
+
+            ARCHIVE="$DEPLOY_PATH/.deploy/$ARCHIVE_NAME"
+            RELEASE_DIR="$DEPLOY_PATH/releases/$RELEASE_ID"
+            CURRENT_LINK="$DEPLOY_PATH/.output"
+            NEXT_LINK="$DEPLOY_PATH/.output.next"
+
+            export PATH="/home/deploy/.nvm/versions/node/v24.7.0/bin:$PATH"
+            export PM2_HOME="/home/deploy/.pm2"
+            export NITRO_HOST="127.0.0.1"
+            export NITRO_PORT="3000"
+            export NUXT_PUBLIC_API_BASE="$API_BASE"
+
+            test -s "$ARCHIVE"
+            test -L "$CURRENT_LINK"
+
+            PREVIOUS_TARGET="$(readlink "$CURRENT_LINK")"
+            NEW_TARGET="releases/$RELEASE_ID/.output"
+
+            mkdir "$RELEASE_DIR"
+            tar -xzf "$ARCHIVE" -C "$RELEASE_DIR"
+            test -f "$RELEASE_DIR/.output/server/index.mjs"
+
+            ln -sfn "$NEW_TARGET" "$NEXT_LINK"
+            mv -Tf "$NEXT_LINK" "$CURRENT_LINK"
+
+            HEALTHY=0
+
+            if pm2 restart "$PM2_APP_NAME" --update-env; then
+              for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
+                if curl --fail --silent --max-time 5 \
+                  http://127.0.0.1:3000/ >/dev/null; then
+                  HEALTHY=1
+                  break
+                fi
+
+                sleep 2
+              done
+            fi
+
+            if [ "$HEALTHY" -eq 1 ]; then
+              pm2 save
+              rm -f "$ARCHIVE"
+              echo "Release activated: $RELEASE_ID"
+              exit 0
+            fi
+
+            echo "Health check failed, rolling back"
+
+            ln -sfn "$PREVIOUS_TARGET" "$NEXT_LINK"
+            mv -Tf "$NEXT_LINK" "$CURRENT_LINK"
+            pm2 restart "$PM2_APP_NAME" --update-env
+
+            exit 1
+            REMOTE

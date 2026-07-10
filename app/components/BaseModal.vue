@@ -141,13 +141,18 @@ const submitStatus = ref<'uploading' | 'error' | 'idle'>('idle')
 const submitError = ref<string>('')
 const handleSubmit = async () => {
   // console.log('click btn')
+  if (!newFile.value) {
+    toast.addMessage('Please upload file first')
+    return
+  }
+  const content = await newFile.value.text()
   submitStatus.value = 'uploading'
   try {
     const postUpload:editedPost = {
         title: newTitle.value,
         summary: newSummary.value,
         tags: tagsList.value,
-        file: newFile.value,
+        content,
         post_status: 'published'
     } 
     await PostApi.create(postUpload)   
@@ -183,17 +188,21 @@ const handleDelete = async () => {
 }
 
 const handleUpdate = async () => {
+  if (!newFile.value) {
+    toast.addMessage('Please upload file first')
+    return
+  }
+  const content = await newFile.value.text()
   submitStatus.value = 'uploading'
   try {
     const postUpload:updatedPost = {
         title: newTitle.value,
         summary: newSummary.value,
         tags: tagsList.value,
-        file: newFile.value,
+        content,
         post_status: 'published',
         slug:props.post.slug,
         id:props.post.id,
-        published_at:props.post.published_at
     } 
     await PostApi.updatePost(postUpload)   
     submitStatus.value = 'idle' 

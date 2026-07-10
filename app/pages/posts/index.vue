@@ -25,6 +25,10 @@ useHead({
   title:'Posts'
 })
 
+useSeoMeta({
+  description:'Browse technical articles and study notes on frontend development, programming, web technologies and AI-assisted learning.'
+})
+
 const {data, pending:isLoading, status} = await PostApi.getList()
 const postList = computed(() => data.value?.data ?? [])
 

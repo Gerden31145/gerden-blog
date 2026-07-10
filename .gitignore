@@ -8,6 +8,7 @@ dist
 
 # Node dependencies
 node_modules
+./worker/node_modules
 
 # Logs
 logs
@@ -32,3 +33,7 @@ Prisma初始化.md
 Nuxt项目的api模块组织.md
 
 /backend/vendor/
+
+#vscode
+.vscode
+./worker/.vscode

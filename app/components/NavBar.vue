@@ -1,23 +1,25 @@
 <template>
-  <div class="font-serif py-3 flex text-text-primary justify-between mt-4">
-    <div class="text-3xl">GDB</div>
-    <div class="w-[50%]">
-      <div class="flex gap-4 w-[100%]">
-        <div class="w-[30%] text-center"
-       :class="isActive('/')?'font-extrabold':''"  
+  <div class="font-serif py-3 flex flex-wrap text-text-primary justify-between mt-4 items-center mb-6">
+    <div class="text-3xl">
+      <img src="/icon.svg" class=" h-12" alt="Gerden Blog logo">
+    </div>
+    <div>
+      <div class="flex gap-4 w-full">
+        <div class="w-[30%] text-center text-primary"
+       :class="isActive('/') ? 'text-text-primary':''"
         >
           <NuxtLink to="/">HOME</NuxtLink> 
         </div>
-        <div>|</div>
-        <div class="w-[30%] text-center"
-       :class="isActive('/posts')?'font-extrabold':''"  
+        <div class="text-primary">|</div>
+        <div class="w-[30%] text-center text-primary"
+          :class="isActive('/posts') ? 'text-text-primary':''"  
         >
           <NuxtLink to="/posts">POSTS</NuxtLink> 
         </div> 
-        <div>|</div>
+        <div class="text-primary">|</div>
         <div
-          class="w-[30%] text-center"
-          :class="isActive('/login') ? 'font-extrabold' : ''"
+          class="w-[30%] text-center text-primary"
+          :class="isActive('/login') ? 'text-text-primary' : ''"
         >
           <button
             type="button"
@@ -27,9 +29,9 @@
             {{ usersStore.isLoggedIn ? 'LOGOUT' : 'LOGIN' }}
           </button>
         </div>
-        <div v-if="isAdmin">|</div>
-        <div class="w-[30%]"
-        :class="isActive('/admin')?'font-extrabold':''" 
+        <div v-if="isAdmin" class="text-primary">|</div>
+        <div class="w-[30%] text-primary"
+        :class="isActive('/admin')?'text-text-primary':''" 
         v-if="isAdmin"
         >
           <NuxtLink to="/admin">ADMIN</NuxtLink>
@@ -43,6 +45,7 @@
 import { useRoute } from 'vue-router'
 import { useUsersStore } from '~/stores/users'
 
+const isAdmin = computed(() => usersStore.isAdmin)
 const route = useRoute()
 const usersStore = useUsersStore()
 
@@ -60,7 +63,6 @@ const handleAuthClick = async () => {
   await navigateTo('/login')
 }
 
-const isAdmin = computed(() => usersStore.isAdmin)
 
 </script>
 
