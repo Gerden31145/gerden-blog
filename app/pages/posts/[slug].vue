@@ -13,7 +13,7 @@
           <a
             class="toc-link"
             :class="{ active: activeTocId === item.id }"
-            @click.prevent="scrollToHeading(item.id)"
+            :href="`#${item.id}`"
           >{{ item.text }}</a>
         </li>
       </ul>
@@ -135,5 +135,9 @@ onMounted(() => {
 </script>
 
 <style>
+html {
+  scroll-behavior: smooth;
+}
+
 
 </style>
