@@ -10,3 +10,9 @@
 body {
   @apply bg-background
 }
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--color-background);
+  scrollbar-gutter: stable;
+}

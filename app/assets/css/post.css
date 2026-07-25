@@ -46,6 +46,9 @@
 
 /* TOC 侧边栏 */
 .toc-sidebar {
+  --toc-scrollbar-thumb: #96b0d7;
+  --toc-scrollbar-track: transparent;
+
   position: fixed;
   /* top: 120px; */
   left: max(calc((100vw - 860px) / 2 - 220px), 16px);
@@ -53,6 +56,11 @@
   max-height: calc(100vh - 140px);
   overflow-y: auto;
   /* padding: 5px; */
+
+  /* 覆盖从 html 继承的全局滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color:
+    var(--toc-scrollbar-thumb) var(--toc-scrollbar-track);
 }
 
 .toc-sidebar::-webkit-scrollbar {
