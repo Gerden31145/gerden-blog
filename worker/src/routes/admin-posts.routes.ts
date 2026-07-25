@@ -28,7 +28,7 @@ const postSchema = z.object({
 adminPostsRoutes.post('/admin/posts', requireAdmin, async (c) => {
   const body = await parseJSON(c, postSchema)
 
-  const post = await createAdminPost(getDB(c.env), body)
+  const post = await createAdminPost(getDB(c.env), c.env.POST_RENDER_QUEUE, body)
 
   return c.json(success(post, '文章创建成功'), 201)
 })
@@ -39,7 +39,7 @@ adminPostsRoutes.post('/admin/posts/:id/update', requireAdmin, async (c) => {
     throw new AppError(400, '文章ID无效')
 
   const body = await parseJSON(c, postSchema)
-  const post = await updateAdminPost(getDB(c.env), id, body)
+  const post = await updateAdminPost(getDB(c.env), id, c.env.POST_RENDER_QUEUE, body)
 
   return c.json(success(post, '文件更新成功'), 201)
 })

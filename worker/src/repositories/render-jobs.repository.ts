@@ -100,3 +100,28 @@ export async function markPostRenderFailed(
       eq(posts.contentHash, contentHash),
     ))
 }
+
+export async function writeRenderedPost(
+  db: Db,
+  postId: number,
+  contentHash: string,
+  html: string,
+  toc: unknown[]
+) {
+  const rows = await db.update(posts)
+    .set({
+      contentHtml: html,
+      toc: JSON.stringify(toc),
+      renderStatus: 'ready',
+      renderError: null,
+      renderedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(
+      eq(posts.id, postId),
+      eq(posts.contentHash, contentHash),
+    ))
+    .returning({ id: posts.id })
+
+  return rows.length > 0
+}

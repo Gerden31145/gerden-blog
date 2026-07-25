@@ -11,15 +11,22 @@ import {
   findAdminPostById,
   updatePostWithTags
 } from '../repositories/posts.repository'
+import { sendPostRender } from '../services/render-queue.service'
+import { RenderPostMessage } from '../types/render-job'
+import { markPostRenderFailed, markRenderJobFailed } from '../repositories/render-jobs.repository'
 
-export async function createAdminPost(db: Db, input: AdminPostInput) {
+function toErrorMessage(err: unknown) {
+  return err instanceof Error ? err.message : String(err)
+}
+
+export async function createAdminPost(db: Db, queue: Queue<RenderPostMessage>, input: AdminPostInput) {
   const now = new Date().toISOString()
 
   const contentHash = await sha256Hex(input.content)
 
   const jobId = crypto.randomUUID()
 
-  return createPostWithTags(db, {
+  const post = await createPostWithTags(db, {
     title: input.title,
     summary: input.summary ?? '',
     content: input.content,
@@ -33,20 +40,40 @@ export async function createAdminPost(db: Db, input: AdminPostInput) {
   },
     jobId
   )
+
+  if (!post) throw new AppError(500, '文章创建失败')
+
+  try {
+    await sendPostRender({
+      jobId,
+      postId: post.id,
+      contentHash: post.contentHash,
+      reason: 'create'
+    }, queue)
+  } catch (err) {
+    const message = `Queue send failed: ${toErrorMessage(err)}`
+    await markRenderJobFailed(db, jobId, message, 0)
+    await markPostRenderFailed(db, post.id, post.contentHash, message)
+    throw new AppError(500, '文章已保存，但渲染任务入队失败')
+  }
+
+  return post
 }
 
-export async function updateAdminPost(db: Db, id: number, input: UpdatePostInput) {
+export async function updateAdminPost(db: Db, id: number, queue: Queue<RenderPostMessage>, input: UpdatePostInput) {
   const existing = await findAdminPostById(db, id)
   if (!existing) throw new AppError(404, 'Not Found')
 
   const contentHash = await sha256Hex(input.content)
 
-  return updatePostWithTags(db, {
+  const jobId = crypto.randomUUID()
+
+  const post = await updatePostWithTags(db, {
     title: input.title,
     summary: input.summary ?? '',
     content: input.content,
-    contentHTML: '',
-    toc: '[]',
+    contentHTML: existing.contentHtml,
+    toc: existing.toc,
     post_status: input.post_status,
     published_at: input.post_status ===
       'published'
@@ -55,7 +82,27 @@ export async function updateAdminPost(db: Db, id: number, input: UpdatePostInput
       : null,
     post_tags: input.post_tags,
     content_hash: contentHash
-  }, id)
+  }, id, jobId)
+
+  if (!post) throw new AppError(500, '文章更新失败')
+
+  if (contentHash === existing.contentHash) return existing // 如果文章内容没变，无需重新渲染
+
+  try {
+    await sendPostRender({
+      jobId,
+      postId: post.id,
+      contentHash,
+      reason: 'update'
+    }, queue)
+  } catch (err) {
+    const message = `Queue send failed: ${toErrorMessage(err)}`
+    await markRenderJobFailed(db, jobId, message, 0)
+    await markPostRenderFailed(db, post.id, post.contentHash, message)
+    throw new AppError(500, '文章已保存，但渲染任务入队失败')
+  }
+
+  return post
 }
 
 export async function

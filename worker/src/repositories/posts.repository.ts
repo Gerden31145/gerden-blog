@@ -225,7 +225,7 @@ export async function createPostWithTags(db: Db,
   return findAdminPostById(db, post.id)
 }
 
-export async function updatePostWithTags(db: Db, input: CreatePostInput, id: number) {
+export async function updatePostWithTags(db: Db, input: CreatePostInput, id: number, jobId: string) {
   const post = await findAdminPostById(db, id)
   if (!post) throw new AppError(404, '文章不存在')
 
@@ -260,8 +260,9 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
       summary: input.summary,
       content: input.content,
       slug: newSlug ?? post.slug,
-      contentHtml:
-        input.contentHTML,
+      contentHash: input.content_hash,
+      renderStatus: 'pending',
+      contentHtml: input.contentHTML,
       toc: input.toc,
       postStatus: input.post_status,
       updatedAt: new
@@ -274,6 +275,7 @@ export async function updatePostWithTags(db: Db, input: CreatePostInput, id: num
   statements.push(db.delete(postTags).where(eq(postTags.postId, id)))
   statements.push(...buildTagInsertStatements(db, tagNames))
   statements.push(...buildUpdatePostTagStatements(db, id, tagNames))
+  statements.push(buildRenderQueueMessageStatements(db, jobId, newSlug ?? post.slug, input.content_hash))
 
   await db.batch(statements as [D1BatchItem, ...D1BatchItem[]])
 

@@ -8,8 +8,11 @@ import { adminPostsRoutes } from './routes/admin-posts.routes'
 import { commentsRoutes } from './routes/comments.routes'
 import { success, error } from './utils/response'
 import { AppEnv } from './types/app'
+import { AppBindings } from './types/app'
 import { AppError } from './utils/error'
 import { ContentfulStatusCode } from 'hono/utils/http-status'
+import type { RenderPostMessage } from './types/render-job'
+import { handlePostRenderBatch } from './queues/render-post.consumer'
 
 const app = new Hono<AppEnv>()
 
@@ -47,4 +50,11 @@ app.onError((err, c) => {
   return c.json(error(500, 'Internal server error'), 500)
 })
 
-export default app
+export default {
+  fetch(request, env, ctx) {
+    return app.fetch(request, env, ctx)
+  },
+  async queue(batch, env, ctx) {
+    await handlePostRenderBatch(env, batch)
+  }
+} satisfies ExportedHandler<AppBindings, RenderPostMessage>
