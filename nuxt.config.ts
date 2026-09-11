@@ -8,6 +8,15 @@ export default defineNuxtConfig({
   serverDir: 'disabled-server',
   css: ['./app/assets/css/main.css', './app/assets/css/post.css'],
 
+  // Bake the release into the HTML at build time so an old process keeps its old ID.
+  app: {
+    head: {
+      meta: [
+        { name: 'app-release', content: process.env.BUILD_RELEASE_ID || 'local' }
+      ]
+    }
+  },
+
   vite: {
     plugins: [
       tailwindcss()

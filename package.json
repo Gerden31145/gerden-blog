@@ -7,6 +7,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "test:smoke": "playwright test",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@shikijs/rehype": "^4.1.0",
     "@types/node": "^25.6.2",
     "prisma": "^7.8.0",
