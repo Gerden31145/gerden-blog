@@ -4,7 +4,10 @@
   "scope": "all-client-assets-raw",
   "baselineSource": {
     "runId": "35051119776",
-    "runAttempts": [1, 2],
+    "runAttempts": [
+      1,
+      2
+    ],
     "checkoutSha": "9f5897b53ed836e8057d49b24945a00a59b8aa00",
     "node": "v24.18.1",
     "platform": "linux",
@@ -15,7 +18,7 @@
     "cssRawBytes": 22965
   },
   "limits": {
-    "jsRawBytes": 262919,
+    "jsRawBytes": 1,
     "cssRawBytes": 24114
   }
 }

@@ -22,7 +22,7 @@ jobs:
       NUXT_PUBLIC_API_BASE: http://localhost:8787/api
       BUILD_RELEASE_ID: ${{ github.sha }}
       # Daily PRs warn on growth. Use strict for a controlled failure test.
-      BUILD_BUDGET_MODE: warn
+      BUILD_BUDGET_MODE: strict
 
     steps:
       - name: Checkout source
