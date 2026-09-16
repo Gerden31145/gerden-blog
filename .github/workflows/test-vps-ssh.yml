@@ -11,6 +11,8 @@ permissions:
 jobs:
     connection-test:
       runs-on: ubuntu-latest
+      env:
+        RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       steps:
         - name: Checkout source
@@ -25,9 +27,14 @@ jobs:
         - name: Install dependencies
           run: npm ci
 
+        - name: Install Playwright Chromium
+          timeout-minutes: 10
+          run: npx playwright install --with-deps chromium
+
         - name: Build Nuxt
           env:
             NUXT_PUBLIC_API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
+            BUILD_RELEASE_ID: ${{ env.RELEASE_ID }}
           run: npm run build
 
         - name: Verify and package output
@@ -64,23 +71,45 @@ jobs:
               -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=yes \
               "${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}" \
-              "
-                set -eu
+              "bash -s -- '${{ vars.VPS_DEPLOY_PATH }}' '${{ vars.PM2_APP_NAME }}'" <<'REMOTE'
+            set -eu
 
-                test \"\$(whoami)\" = 'deploy'
-                test -w '${{ vars.VPS_DEPLOY_PATH }}'
+            DEPLOY_PATH="$1"
+            PM2_APP_NAME="$2"
 
-                export PATH='/home/deploy/.nvm/versions/node/v24.7.0/bin':\$PATH
-                export PM2_HOME='/home/deploy/.pm2'
+            test "$(whoami)" = 'deploy'
+            test -w "$DEPLOY_PATH"
 
-                pm2 describe '${{ vars.PM2_APP_NAME }}' >/dev/null
-                curl --fail --silent http://127.0.0.1:3000 >/dev/null
+            export PATH="/home/deploy/.nvm/versions/node/v24.7.0/bin:$PATH"
+            export PM2_HOME='/home/deploy/.pm2'
 
-                echo 'SSH connection succeeded'
-                echo 'User:' \"\$(whoami)\"
-                echo 'PM2 app:' '${{ vars.PM2_APP_NAME }}'
-                echo 'Nuxt health check: OK'
-              "
+            pm2 describe "$PM2_APP_NAME" >/dev/null
+
+            HEALTH_BODY="$(mktemp)"
+            trap 'rm -f "$HEALTH_BODY"' EXIT
+
+            if ! HTTP_STATUS=$(curl --silent --show-error --connect-timeout 2 --max-time 5 \
+              --output "$HEALTH_BODY" --write-out '%{http_code}' \
+              http://127.0.0.1:3000/); then
+              echo 'Nuxt health check failed: request failed'
+              exit 1
+            fi
+
+            if [ "$HTTP_STATUS" != '200' ]; then
+              echo "Nuxt health check failed: expected HTTP 200, got $HTTP_STATUS"
+              exit 1
+            fi
+
+            if ! grep -Fq 'Welcome to Gerden Blog!' "$HEALTH_BODY"; then
+              echo 'Nuxt health check failed: homepage marker missing'
+              exit 1
+            fi
+
+            echo 'SSH connection succeeded'
+            echo 'User:' "$(whoami)"
+            echo 'PM2 app:' "$PM2_APP_NAME"
+            echo 'Nuxt health check: OK (HTTP 200 and homepage marker found)'
+            REMOTE
 
         - name: Upload package to VPS
           run: |
@@ -116,7 +145,6 @@ jobs:
             PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
             API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
           run: |
-            RELEASE_ID="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             ARCHIVE_NAME="nuxt-${GITHUB_RUN_ID}.tar.gz"
 
             ssh \
@@ -134,6 +162,7 @@ jobs:
             API_BASE="$3"
             RELEASE_ID="$4"
             ARCHIVE_NAME="$5"
+            RELEASE_MARKER="<meta name=\"app-release\" content=\"$RELEASE_ID\">"
 
             ARCHIVE="$DEPLOY_PATH/.deploy/$ARCHIVE_NAME"
             RELEASE_DIR="$DEPLOY_PATH/releases/$RELEASE_ID"
@@ -156,6 +185,9 @@ jobs:
             tar -xzf "$ARCHIVE" -C "$RELEASE_DIR"
             test -f "$RELEASE_DIR/.output/server/index.mjs"
 
+            HEALTH_BODY="$(mktemp)"
+            trap 'rm -f "$HEALTH_BODY"' EXIT
+
             ln -sfn "$NEW_TARGET" "$NEXT_LINK"
             mv -Tf "$NEXT_LINK" "$CURRENT_LINK"
 
@@ -163,10 +195,22 @@ jobs:
 
             if pm2 restart "$PM2_APP_NAME" --update-env; then
               for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
-                if curl --fail --silent --max-time 5 \
-                  http://127.0.0.1:3000/ >/dev/null; then
-                  HEALTHY=1
-                  break
+                if HTTP_STATUS=$(curl --silent --show-error --connect-timeout 2 --max-time 5 \
+                  --output "$HEALTH_BODY" --write-out '%{http_code}' \
+                  http://127.0.0.1:3000/); then
+                  if [ "$HTTP_STATUS" != '200' ]; then
+                    echo "Health check $ATTEMPT/10 failed: expected HTTP 200, got $HTTP_STATUS"
+                  elif ! grep -Fq 'Welcome to Gerden Blog!' "$HEALTH_BODY"; then
+                    echo "Health check $ATTEMPT/10 failed: homepage marker missing"
+                  elif ! grep -Fq "$RELEASE_MARKER" "$HEALTH_BODY"; then
+                    echo "Health check $ATTEMPT/10 failed: release marker missing or mismatched (expected $RELEASE_ID)"
+                  else
+                    echo "Health check $ATTEMPT/10 passed: HTTP 200, homepage marker and release $RELEASE_ID matched"
+                    HEALTHY=1
+                    break
+                  fi
+                else
+                  echo "Health check $ATTEMPT/10 failed: request failed"
                 fi
 
                 sleep 2
@@ -176,7 +220,7 @@ jobs:
             if [ "$HEALTHY" -eq 1 ]; then
               pm2 save
               rm -f "$ARCHIVE"
-              echo "Release activated: $RELEASE_ID"
+              echo "Release activated and local health check passed: $RELEASE_ID (public check pending)"
               exit 0
             fi
 
@@ -188,3 +232,68 @@ jobs:
 
             exit 1
             REMOTE
+
+        - name: Check public frontend
+          timeout-minutes: 3
+          env:
+            PUBLIC_URL: https://gerden-shop.cn/
+            HOMEPAGE_MARKER: Welcome to Gerden Blog!
+          run: |
+            set -eu
+
+            RELEASE_MARKER="<meta name=\"app-release\" content=\"$RELEASE_ID\">"
+            HEALTH_BODY="$(mktemp)"
+            trap 'rm -f "$HEALTH_BODY"' EXIT
+
+            # Run on the GitHub runner to exercise public DNS, HTTPS and the proxy.
+            # Request cache revalidation; the response must still prove its release ID.
+            for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
+              if HTTP_STATUS=$(curl --silent --show-error --connect-timeout 3 --max-time 10 \
+                --header 'Cache-Control: no-cache' \
+                --output "$HEALTH_BODY" --write-out '%{http_code}' \
+                "$PUBLIC_URL"); then
+                if [ "$HTTP_STATUS" != '200' ]; then
+                  echo "Public health check $ATTEMPT/10 failed: expected HTTP 200, got $HTTP_STATUS"
+                elif ! grep -Fq "$HOMEPAGE_MARKER" "$HEALTH_BODY"; then
+                  echo "Public health check $ATTEMPT/10 failed: homepage marker missing"
+                elif ! grep -Fq "$RELEASE_MARKER" "$HEALTH_BODY"; then
+                  echo "Public health check $ATTEMPT/10 failed: release marker missing or mismatched (expected $RELEASE_ID)"
+                else
+                  echo "Public health check $ATTEMPT/10 passed: $PUBLIC_URL (HTTP 200, homepage marker and release $RELEASE_ID matched)"
+                  echo "Public HTTP check verified: $RELEASE_ID (browser check pending)"
+                  exit 0
+                fi
+              else
+                echo "Public health check $ATTEMPT/10 failed: request failed (see curl error above)"
+              fi
+
+              if [ "$ATTEMPT" -lt 10 ]; then
+                sleep 3
+              fi
+            done
+
+            # Public failures alone cannot establish whether reverting code would help.
+            echo "::error::Public health check failed: $PUBLIC_URL (expected release $RELEASE_ID). The locally healthy release remains active; inspect DNS, TLS, proxy, caches and application logs."
+            exit 1
+
+        - name: Check frontend in Chromium
+          id: browser-smoke
+          timeout-minutes: 8
+          env:
+            PLAYWRIGHT_BASE_URL: https://gerden-shop.cn
+            PLAYWRIGHT_API_BASE: ${{ vars.NUXT_PUBLIC_API_BASE }}
+          run: npm run test:smoke
+
+        - name: Upload Playwright report
+          if: ${{ !cancelled() && steps.browser-smoke.outcome != 'skipped' && steps.browser-smoke.outcome != '' }}
+          uses: actions/upload-artifact@v4
+          with:
+            name: playwright-report-${{ github.run_id }}-${{ github.run_attempt }}
+            path: |
+              playwright-report/
+              test-results/
+            retention-days: 7
+
+        - name: Confirm deployment
+          run: |
+            echo "Deployment verified by HTTP and Chromium checks: $RELEASE_ID"

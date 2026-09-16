@@ -1,0 +1,4 @@
+interface:
+  display_name: "前端构建优化教练"
+  short_description: "分阶段练习 Nuxt 构建优化，审查代码、真实实验数据与简历证据"
+  default_prompt: "使用 $frontend-build-coach 带我继续当前项目的构建优化学习，先确认阶段和已有证据，再给我一个自己动手完成的练习。"

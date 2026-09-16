@@ -4,6 +4,8 @@
 .nuxt
 .nitro
 .cache
+playwright-report/
+test-results/
 dist
 
 # Node dependencies
@@ -37,3 +39,5 @@ Nuxt项目的api模块组织.md
 #vscode
 .vscode
 ./worker/.vscode
+
+.perf-results/
