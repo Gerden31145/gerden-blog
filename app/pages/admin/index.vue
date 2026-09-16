@@ -23,16 +23,18 @@
       @click="handleLogout"
       class="text-2xl text-red-50 bg-text-primary rounded w-36 p-1">Logout</button>
     </div>
-    <BaseModal 
+    <AsyncBaseModal
     v-if="modalOpen" 
     @close="closeModal" 
     @refetch="getData" 
-    :post="postInfo" :status="modalStatus"></BaseModal>
+    :post="postInfo" :status="modalStatus">
+    </AsyncBaseModal>
       </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { defineAsyncComponent, h, ref } from 'vue'
+import ModalLoading from '~/components/ModalLoading.vue'
 import { PostApi } from '~/services/posts';
 import type { PostList } from '~/types/posts';
 import type { modalStatusType } from '~/types/modal';
@@ -61,6 +63,16 @@ const modalOpen = ref<boolean>(false)
 const closeModal = () => {
   modalOpen.value = false
 }
+
+const AsyncBaseModal = defineAsyncComponent({
+  loader: () => import('~/components/BaseModal.vue'),
+  loadingComponent: ModalLoading,
+  // Vue passes only the error to this component; bind close explicitly.
+  errorComponent: () => h(ModalLoading, { failed: true, onClose: closeModal }),
+  delay: 150,
+  timeout: 10000,
+  suspensible: false,
+})
 
 const postInfo = ref<PostList | undefined>()
 

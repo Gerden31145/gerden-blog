@@ -31,6 +31,8 @@ export interface PostList {
   post_status: PostsStatus
 }
 
+export type ReadingPost = Omit<Posts, 'content'>
+
 export type editedPost = Pick<PostList, 'title' | 'summary' | 'tags'> & {
   content: string
   post_status: 'published' | 'draft' | 'hidden'

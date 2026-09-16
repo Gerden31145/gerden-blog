@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@pinia/nuxt'],
   serverDir: 'disabled-server',
-  css: ['./app/assets/css/main.css', './app/assets/css/post.css'],
+  css: ['./app/assets/css/main.css'],
 
   // Bake the release into the HTML at build time so an old process keeps its old ID.
   app: {

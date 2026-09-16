@@ -135,6 +135,9 @@ onMounted(() => {
 </script>
 
 <style>
+
+@import '~/assets/css/post.css';
+
 html {
   scroll-behavior: smooth;
 }
