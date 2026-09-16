@@ -1,0 +1,2 @@
+# Keep the measurement script executable by Bash after a Windows checkout.
+scripts/measure-build.sh text eol=lf

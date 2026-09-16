@@ -1,0 +1,80 @@
+name: Frontend Build Check
+
+on:
+  pull_request:
+    # This is the PR target branch, not the source branch.
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Build-time configuration only; this job does not start an API server.
+      NUXT_PUBLIC_API_BASE: http://localhost:8787/api
+      BUILD_RELEASE_ID: ${{ github.sha }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.1"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Record build context
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p .perf-results/ci
+          node scripts/build-context.mjs \
+            > .perf-results/ci/build-context.json
+
+      - name: Build Nuxt
+        run: npm run build
+
+      - name: Verify output
+        run: |
+          test -f .output/server/index.mjs
+          test -d .output/public/_nuxt
+
+      - name: Measure client assets
+        run: |
+          mkdir -p .perf-results/ci
+          node scripts/measure-build.mjs .output/public/_nuxt \
+            > .perf-results/ci/client-assets.json
+
+      - name: Summarize client assets
+        run: |
+          node scripts/summarize-build.mjs \
+            .perf-results/ci/client-assets.json \
+            .perf-results/ci/build-context.json \
+            > .perf-results/ci/summary.md
+          cat .perf-results/ci/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload client assets report
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-assets-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .perf-results/ci/client-assets.json
+            .perf-results/ci/build-context.json
+            .perf-results/ci/summary.md
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error

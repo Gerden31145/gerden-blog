@@ -10,6 +10,8 @@
 
 推荐采用“自己动手 + 教练审查”的方式：
 
+本轮协作约定更新（2026-09-14）：用户已熟悉构建和验证流程，后续由教练执行生产构建、产物测量、证据保存与结果分析，用户负责页面和交互检查。代码学习及修改仍按每次约定进行；不将这项授权扩展为自动实施全部优化。供电或后台条件不明确时如实记录，不作构建提速比较，无需每轮重新请求构建授权。
+
 1. 先读当前阶段涉及的文件，用自己的话解释它们的关系。
 2. 写下假设：改什么、为什么可能改善、看哪个指标、可能损失什么。
 3. 自己实现一个小改动；卡住时先要求提示或局部示例。
@@ -31,13 +33,13 @@
 
 | 阶段 | 主题 | 主要交付物 | 状态 |
 | --- | --- | --- | --- |
-| 0 | 理解构建链路与实验规则 | 构建链路图、环境表、可复现源码状态 | 未开始 |
-| 1 | 建立生产基线 | 构建日志、产物清单、页面请求与功能基线 | 未开始 |
-| 2 | 分析依赖与清理遗留内容 | 使用关系表、依赖清理实验 | 未开始 |
-| 3 | Tailwind 与页面 CSS 优化 | CSS 产物对比、视觉回归结果 | 未开始 |
-| 4 | 组件按需加载与拆包边界 | 弹窗加载实验、可选评论实验 | 未开始 |
-| 5 | Nuxt payload 精简 | 数据流图、HTML/payload 体积对比 | 未开始 |
-| 6 | CI 构建效率与资源预算 | 分阶段耗时、资源预算检查设计 | 未开始 |
+| 0 | 理解构建链路与实验规则 | 构建链路图、环境表、可复现源码状态 | 已完成（2026-09-12，见[学习记录](../阶段%200%20学习记录.md)） |
+| 1 | 建立生产基线 | 构建日志、产物清单、页面请求与功能基线 | 进行中（见[基线记录](../performance/build-baseline.md)） |
+| 2 | 分析依赖与清理遗留内容 | 使用关系表、依赖清理实验 | 既定三组清理已完成，详见阶段 2 记录 |
+| 3 | Tailwind 与页面 CSS 优化 | CSS 产物对比、视觉回归结果 | @reference 已验收；页面 style 与真实 SSR 样式已验证，人工验收待补 |
+| 4 | 组件按需加载与拆包边界 | 弹窗加载实验、可选评论实验 | 已验收并保留（2026-09-15 用户确认），未宣称首屏提速 |
+| 5 | Nuxt payload 精简 | 数据流图、HTML/payload 体积对比 | 前端实验已验证并保留：payload -10.94%，页面/404 与受控重定向通过 |
+| 6 | CI 构建效率与资源预算 | 分阶段耗时、资源预算检查设计 | PR 构建、元信息、摘要与附件配置已接入并本地验证，真实 CI 与预算待补，见[记录](../performance/phase-6-ci-budget.md) |
 | 7 | 复现、复盘与面试表达 | 最终报告、证据索引、可核验简历表述 | 未开始 |
 
 阶段 0、1 必须先完成。阶段 2—5 按基线发现的收益调整顺序；每次只做其中一项实验。阶段 6 使用稳定方案建立检查，阶段 7 重新验证整体结果。
@@ -148,6 +150,27 @@ npm run build
 
 ### 1.2 记录构建耗时
 
+当前练习采用 Git Bash，由本人执行项目提供的 [measure-build.sh](../../scripts/measure-build.sh)：
+
+```bash
+PERF_NOTES='填写实际供电、电源模式和后台负载' bash scripts/measure-build.sh build-first
+```
+
+脚本默认使用 `http://localhost:8787/api` 和 `perf-baseline`，可通过 `NUXT_PUBLIC_API_BASE`、`BUILD_RELEASE_ID` 环境变量覆盖；`--help` 可查看完整说明。需要已安装 Node/npm 和项目依赖。
+
+每次结果保存在 `.perf-results/baseline/<run-id>/`，包含 `build.log`、`elapsed.txt`、`environment.json`、`source-status.txt` 和 `result.json`。已有编号不会覆盖；构建失败仍保存结果，并返回构建退出码。查看首次结果：
+
+```bash
+cat .perf-results/baseline/build-first/result.json
+tail -n 40 .perf-results/baseline/build-first/build.log
+```
+
+脚本以 Bash time 测量 `npm run build`，包含 npm 启动和日志写入，不包含环境信息采集。它不安装依赖、不清缓存、不启动服务、不部署。默认缓存记录为“现有缓存，未清理”，首次记录不能直接称为冷构建。中断的运行可能没有 result.json，不作为成功样本。
+
+Git 状态文件不是完整源码快照；遇到相关未提交代码仍要另行保留。脚本本身与测量工具也需要版本可追溯，A/B 使用同一版本和同一 shell 环境。Git Bash 与 WSL 是不同运行环境，不混合计时。
+
+下面保留 PowerShell 手动计时方式作为学习参考，正式对比固定选用一种方式：
+
 在本地建立 `.perf-results/` 目录；自行将它加入本地 Git 排除配置或项目 `.gitignore`，避免意外提交大型结果。下面每次使用新编号，不覆盖旧记录：
 
 ```powershell
@@ -180,7 +203,22 @@ Get-ChildItem -LiteralPath .output/public/_nuxt -Recurse -File |
 
 把 JS、CSS 分别求和，统一用 B 或 KiB（1 KiB = 1024 B）。这只是原始大小。
 
-练习：之后自己编写 `scripts/measure-build.mjs`，使用 Node 文件系统和 `node:zlib` 输出原始、固定参数 gzip/Brotli 大小及 Top 10 文件。先写指标说明，再写代码。输出保留压缩参数；文件独立压缩之和不能叫做发布归档大小，也不能假设部署服务器采用相同压缩。
+本轮用户完成单文件测量练习后，将目录统计脚本交由教练实现。现有 `scripts/measure-build.mjs` 使用 Node 文件系统和 `node:zlib`，支持单个 JS/CSS 文件或递归目录统计，输出固定参数的原始/gzip/Brotli 字节数、JS/CSS 汇总、完整清单及 Top 10。目录遍历跳过符号链接。输出保留运行时版本、压缩参数和文件哈希；文件独立压缩之和不能叫做发布归档大小，也不能假设部署服务器采用相同压缩。
+
+在项目根目录的 Git Bash 执行：
+
+```bash
+node scripts/measure-build.mjs .output/public/_nuxt
+```
+
+如需保存结果，使用新的文件名；Bash 的 `>` 会覆盖已有文件，可先通过 `set -o noclobber` 禁止覆盖：
+
+```bash
+set -o noclobber
+node scripts/measure-build.mjs .output/public/_nuxt > .perf-results/baseline/client-compression-01.json
+```
+
+命令成功后再使用结果；错误输出走 stderr 并返回非零退出码。脚本不会执行构建或写入产物，压缩估算用时不计入 build 耗时。
 
 ### 1.4 读 bundle 分析报告
 
@@ -232,9 +270,11 @@ npm run test:smoke
 
 ## 阶段 2：审计依赖，逐组清理遗留内容
 
+**本轮状态（2026-09-14）：已完成既定三组清理并保留改动。** [Prisma 清理](../performance/phase-2-prisma-cleanup.md)、[nuxt-auth-utils 清理](../performance/phase-2-auth-cleanup.md)、[Markdown 依赖归属](../performance/phase-2-markdown-cleanup.md)分别记录审计和验证证据。根项目累计移除 12 个直接声明、190 个锁文件安装路径条目；客户端 22 个 JS/CSS 内容哈希不变。Worker 补齐 4 个直接声明且既有依赖版本不变。未验证安装提速；后两组因电池供电不进行构建耗时对比，原有管理员认证异常不在本轮修复范围内。
+
 **目标：** 根据实际引用确认哪些依赖仍参与开发、构建或运行，理解 tree shaking 的边界。
 
-先搜索，避免凭依赖名称删除：
+先搜索，避免凭依赖名称删除。以下命令为清理前练习记录；清理后的旧 server 和 Prisma 配置已归档，不再位于原路径：
 
 ```powershell
 rg -n 'prisma|adapter-mariadb|nuxt-auth-utils|dotenv|unified|remark-|rehype-|shiki' app server worker prisma.config.ts package.json
@@ -278,6 +318,8 @@ rg -n 'prisma|nuxt-auth-utils|dotenv|unified|remark-|rehype-|shiki' .github docs
 
 第二次实验再调整加载范围：从 `nuxt.config.ts` 全局 `css` 中移除 post.css，然后在 `app/pages/posts/[slug].vue` 的 setup 中引入：
 
+**本项目实测更新：** 下方 script import 是已试验但未保留的候选，出现 SSR 正文样式收集缺失。当前改为在文章页面已有的非 scoped `<style>` 顶部写 `@import '~/assets/css/post.css';`，已确认正文规则进入 SSR HTML。客户端仍会请求外部文章 CSS，需记录内联与外部请求的双重成本。真实正文和交互验收待本地 Worker 恢复。详见[页面 CSS 实验记录](../performance/phase-3-page-css.md)。
+
 ```ts
 import '~/assets/css/post.css'
 ```
@@ -293,6 +335,8 @@ import '~/assets/css/post.css'
 **追问：** `@import` 和 `@reference` 差在哪里？按页面引入为什么仍可能被预取？
 
 ## 阶段 4：从后台弹窗理解按需加载
+
+本轮进度：已完成动态分包、HAR 核对与加载/失败/超时反馈，2026-09-15 用户明确反馈阶段 4 验收完毕，保留当前实现。首次点击仍存在网络等待，未宣称首屏提速。数据、受控检查与用户反馈的范围见[弹窗实验记录](../performance/phase-4-modal-lazy.md)。阶段 3 的真实文章人工验收单独跟踪。
 
 **目标：** 区分路由分包、条件渲染、动态 import、资源预取和 hydration。
 
@@ -319,6 +363,8 @@ Nuxt 支持通过 Lazy 组件形成动态导入，是否推迟下载取决于何
 
 ## 阶段 5：减少不需要的 Nuxt payload
 
+本轮进度：2026-09-15 前端 transform 实验已验证并保留。固定文章 payload 23808 → 21204 B，Worker 响应哈希不变；全量 JS/CSS 略增。正常页面和 404 由用户检查通过，SSR 301 与客户端重定向使用受控 API 响应验证通过；未覆盖真实数据库旧 slug 查询，未宣称加载提速。见[文章 payload 实验记录](../performance/phase-5-post-payload.md)。后端精简可作为独立延伸实验；其他阶段的待验收项仍单独跟踪。
+
 **目标：** 理解 JS bundle 和 SSR 序列化数据是两条不同的传输路径。
 
 按顺序阅读 `app/types/posts.ts`、`app/services/posts.ts`、`app/composables/useAPI.ts`、`app/pages/posts/[slug].vue`。只为确认返回结构阅读 Worker 的详情查询，本阶段不修改 Worker API。
@@ -343,6 +389,8 @@ Nuxt 支持用 transform/pick 控制交给组件和序列化的数据，具体�
 **追问：** 为什么已经渲染过的正文还可能出现在 payload？保留客户端导航和 hydration 正确性需要哪些字段？
 
 ## 阶段 6：让构建优化进入 CI
+
+本轮进度：frontend-build-check.yml 已接入安装、源码与环境元信息、构建、JSON 测量、Markdown 摘要及 artifact 上传。本地语法/脚本验证和初版构建通过，尚未运行 GitHub Actions；下一步准备真实 PR 采样并建立预算。见[阶段 6 记录](../performance/phase-6-ci-budget.md)。后端接口精简不在本轮范围。
 
 **目标：** 找出开发交付中的真实耗时，并防止资源体积在后续修改中回退。
 
