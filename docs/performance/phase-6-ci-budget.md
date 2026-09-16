@@ -1,6 +1,6 @@
 # 阶段 6：CI 构建效率与资源预算
 
-状态：两轮真实 CI artifact 已核验；预算配置、warn/strict 检查脚本和工作流接入已完成本地验证。日常 PR 使用 warn，严格模式超限失败；远程失败/恢复与附件留存仍待用户手动验证。后端响应精简不纳入本阶段。
+状态：基线采样、真实 warn、strict 受控失败及恢复报告均已核验，失败后附件留存验证通过。预算实验完成；待用户确认恢复运行整体状态、关闭临时验证 PR 并回到学习分支保存记录。后端响应精简不纳入本阶段。
 
 ## 目标与工作方式
 
@@ -304,3 +304,52 @@ node.exe --test scripts/check-build-budget.test.mjs
 另用工作流中的实际 Bash 命令在本地执行四种组合：真实 attempt 2 报告在 warn/strict 均退出 0；明确标记为合成的超线样本在 warn 退出 0、strict 退出 1，均保存了 budget.md 和页面摘要文件内容。YAML 解析与全部 run 块的 Bash 语法检查通过。证据：`.perf-results/phase-6-ci/budget-check-QwzixO/validation.json`，同目录保留输入、结果和源码快照。合成样本只改汇总指标以测试比较逻辑，不作为逐文件一致的测量报告。
 
 本轮未重新构建应用、安装依赖或提交推送；本地未执行 GitHub 上传动作，上传条件仅做静态核对。下一步由用户先阅读，再手动提交并验证日常 PR 报告；随后按计划在临时验证分支使用 strict 和受控阈值验证失败、证据上传及恢复，结束后保留日常 warn 策略。阶段 6 尚未验收完毕。
+
+## 真实 warn 模式报告核验（2026-09-16）
+
+用户提交 e5c53dc 并推送原 PR，反馈检查通过，附件解压至 `.perf-results/phase-6-ci/github-budget-warn/`。五份原始附件齐全，未覆盖；新增 review.json 保存文件哈希和核验范围。
+
+- Run ID / attempt：35065399589 / 1。
+- 实际 checkout / release：030619f9145d3ae9f508d7aa46ffe3993587c122。
+- PR head：e5c53dc38f9c5a2209663062b9193e83de36e73f，与本地已提交 HEAD 一致。
+- PR base：60d3b914045826d8ed1a6e6832bbac4ea4188203。
+- 全量 JS：250399 B，提醒线 262919 B；全量 CSS：22965 B，提醒线 24114 B。均与固定基线相同。
+- budget.md 显示 warn / 通过；预算配置与该提交中的配置一致。summary.md、budget.md 均可从下载 JSON 重新生成并逐字节匹配。
+- 全部 23 个资源的路径、哈希及三种字节指标与基线 attempt 2 相同，逐文件汇总与 summary 一致。
+
+这轮证明正常输入未超线时的远程预算接入与五份附件留存；不能证明远程超线警告、严格失败或失败后上传已经验证。检查状态来自用户反馈，附件在本地核验，没有调用 GitHub API 审计。
+
+下一项练习：从当前学习分支创建临时分支 `test/frontend-budget-strict`，仅将工作流 BUILD_BUDGET_MODE 改为 strict，并把预算 limits.jsRawBytes 临时改为 1 B；保留 baseline 与 CSS 阈值。用户手动提交这两个文件、推送并创建目标为 main 的草稿 PR，标明仅验证预算、不要合并。预期 Build Nuxt 成功、预算步骤因 JS 超线失败、Upload 仍成功。保存附件到 `.perf-results/phase-6-ci/github-budget-strict-fail/` 后再检查，随后恢复 JS 阈值为 262919 B 并保留 strict，验证恢复通过。临时阈值是受控测试，不代表真实性能退化；原学习分支继续保留日常 warn。
+
+## 真实 strict 超线失败与附件留存（2026-09-16）
+
+用户在临时验证分支提交 7e8d73b，反馈构建成功、预算失败、上传成功；上传日志给出 Artifact ID 10434952178、压缩包 4018 B，附件解压至 `.perf-results/phase-6-ci/github-budget-strict-fail/`。五份原文件完整，新增 review.json 保存哈希和核验结果；日志中的 ZIP 哈希仅记录来源，未对原 ZIP 独立复核。
+
+- Run ID / attempt：35068173653 / 1；实际 checkout / release：9aaa3ae130350ddeced1fc7bd61ae1abe5944c19。
+- PR head：7e8d73bfa20e0816d890d6f12f91a8952686b3d7，与本地 HEAD 一致；该提交的模式为 strict，附件预算与提交配置一致。
+- JS 实际 250399 B > 临时上限 1 B，CSS 22965 B < 上限 24114 B。budget.md 正确显示 strict / 失败，仅 JS 超线。
+- 全部 23 个资源记录及汇总与 warn 运行一致。失败由主动降低阈值触发，不是体积增长或应用构建错误。
+- 用下载数据本地重放检查脚本返回 1，生成的 budget.md 与附件逐字节一致；summary.md 也可重现。远程步骤状态依据用户反馈及日志，本地未调用 GitHub API 审计。
+
+已验证预算失败后仍可上传并下载报告。下一步用户只恢复 limits.jsRawBytes 为 262919，保留 strict、baseline 和 CSS 阈值，提交推送同一临时分支，预期预算和整个检查重新通过。新附件保存为 `.perf-results/phase-6-ci/github-budget-strict-recovery/`。恢复检查完成前不关闭验证 PR；该 PR 仅用于实验，不合并到 main。记录文件当前未提交，后续回到学习分支统一保存。
+
+## 恢复阶段附件来源排查（2026-09-16）
+
+用户反馈恢复后仍提示 JS 超过 1 B。核对发现本地最新提交 e4a0c34 已正确把 limits.jsRawBytes 恢复为 262919；但 github-budget-strict-recovery 目录中的五份文件与上一轮失败附件逐字节相同，记录的仍是 run 35068173653 / attempt 1、PR head 7e8d73b、阈值 1 B。因此这批附件属于旧失败运行，不能作为新恢复提交失败的证据。原文件保留，不覆盖。
+
+下一步从测试 PR 的最新提交 e4a0c34 进入对应 Checks，核对新的运行与附件；下载后保存至 `.perf-results/phase-6-ci/github-budget-strict-recovery-02/`，用 build-context.json 的 prHeadSha 确认来源。尚未通过 GitHub API 查询最新运行，恢复验收仍待正确版本的附件和状态。
+
+## strict 恢复报告核验与收尾（2026-09-16）
+
+正确附件保存于 `.perf-results/phase-6-ci/github-budget-strict-recovery-02/`，五份原文件完整；新增 review.json 保存哈希与核验结果。
+
+- Run ID / attempt：35069958908 / 1；实际 checkout / release：d37cfe5205eed3c91b4a73837ada8b2e808be5ad。
+- PR head：e4a0c345e7837964f43fb2e23176bb7b2953ebae，与恢复提交和本地 HEAD 一致。
+- 该提交保持 strict，JS 阈值已恢复为 262919 B，CSS 阈值为 24114 B；附件预算配置与提交一致。
+- 实际 JS 250399 B、CSS 22965 B；budget.md 显示 strict / 通过。本地重放返回 0，预算与资源 Markdown 均可逐字节重现。
+- 全部 23 个资源与失败运行的记录一致，逐文件汇总匹配；失败到恢复仅由阈值变化解释，不是应用性能优化。
+- 原学习分支仍为 warn；从预算实现提交到恢复提交，生产部署工作流无改动。本轮没有重新执行生产健康检查，不据此宣称生产发布已验收。
+
+核心预算实验已形成正常通过→受控失败且保留附件→恢复阈值后通过的证据。整体 job 状态未通过 GitHub API 独立查询，最后仍由用户在页面确认；required check / 分支保护未验证，不能宣称已经强制阻止合并。
+
+收尾由用户手动完成：确认本次运行整体绿色后关闭临时验证 PR（不合并），切回 perf/frontend-build-learning，只提交本轮两份阶段记录并推送原优化 PR。未提交的文档修改可随切换保留；本地数据库与问答.md 不纳入记录提交。原优化 PR 的合并与生产发布另行安排，不与临时验证混在一起。
