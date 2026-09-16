@@ -1,6 +1,6 @@
 # 阶段 6：CI 构建效率与资源预算
 
-状态：frontend-build-check.yml 已接入上下文、构建、测量、Markdown 摘要和三份文件的 artifact 上传；元信息已包含锁文件、平台、API 配置及 PR head/base。YAML/Bash 与脚本本地验证通过，尚未运行 GitHub Actions；真实 CI 基线与预算判断待完成。沿用原学习计划，后端响应精简不纳入本阶段。
+状态：两轮真实 CI artifact 已核验；预算配置、warn/strict 检查脚本和工作流接入已完成本地验证。日常 PR 使用 warn，严格模式超限失败；远程失败/恢复与附件留存仍待用户手动验证。后端响应精简不纳入本阶段。
 
 ## 目标与工作方式
 
@@ -224,3 +224,83 @@ checkoutSha 记录脚本执行时真实检出提交；PR 的 githubSha 通常是
 证据保存于 `.perf-results/phase-6-ci/context-enriched/`，含本地与两种明确标记为模拟的上下文、摘要、源码快照和 validation.json。本地 lockfileSha256 为 45d28ed32b2e9571f66c6428b76ca4a723a1c921eeb53869f598834ec8054d36，platform=win32、arch=x64。GitHub 运行与 PR 字段测试属于本地模拟，不能作为 Actions 成功运行证据。没有重新构建或安装依赖。
 
 下一步准备可审查的提交范围与真实 PR 验证，收集 runner 上的首次产物报告、安装/构建步骤耗时和缓存日志，再决定报告模式与预算阈值。避免把尚未提交的源码与 CI 中的 HEAD 混为同一版本。
+
+## 第一轮真实 PR 检查（2026-09-16）
+
+Git 操作由用户手动完成，形成三个提交：334e3f9（遗留代码与依赖）、6b0edef（前端优化）、42a044f（CI 与记录）。本地数据库和问答.md 改动未纳入这三次提交。用户推送学习分支并创建 PR，反馈检查通过，随后下载 artifact 到 `.perf-results/phase-6-ci/github-run-01/`。
+
+已读取 client-assets.json、build-context.json、summary.md；逐文件统计与汇总一致，使用摘要脚本重新生成的文本与下载摘要一致。review.json 记录三个原始附件的 SHA-256、核验范围与用户提供的日志/耗时来源，未覆盖或修改原文件。
+
+| 项目 | 第一轮 |
+| --- | --- |
+| Run ID / attempt | 35051119776 / 1 |
+| 实际 checkout / GitHub SHA / release | 9f5897b53ed836e8057d49b24945a00a59b8aa00 |
+| PR head | 42a044f5dc3dfab8d6609cb44092adbb313a22e3 |
+| PR base | 60d3b914045826d8ed1a6e6832bbac4ea4188203 |
+| 事件 / 平台 / 架构 | pull_request / linux / x64 |
+| Node / npm | v24.18.1 / 11.16.0 |
+| API 配置 | http://localhost:8787/api |
+| npm 缓存 | 未命中，用户粘贴日志：npm cache is not found |
+| Install dependencies | 20 s，用户记录的 Actions 步骤耗时 |
+| Build Nuxt | 9 s，用户记录的 Actions 步骤耗时 |
+| 全量 JS | 19 文件，250399 B；逐文件 gzip 估计合计 98084 B、Brotli 86546 B |
+| 全量 CSS | 4 文件，22965 B；逐文件 gzip 估计合计 6599 B、Brotli 5662 B |
+
+checkoutSha 与 PR head 不同符合 PR 测试合并提交的记录方式，不拿源分支 SHA 替代实际被构建的版本。附件 prHeadSha 与已提交学习分支一致。本次核验依据下载附件与用户提供的运行状态/日志，没有直接调用 GitHub API 审计运行。
+
+CI 锁文件 SHA-256 为 29158a03b6408ab42ea2ace4ca874555a3710120e0d4e56d9bc1b9739753dc31；测量脚本 SHA-256 为 2ea4d6459ba737aed2843f13a0e9491f09a58cbf11f6f06916130d1d31ae4ab1。两者均与 git show 对应 PR head 中的原始文件字节一致。Windows 工作区中的不同哈希，经精确比较确认仅由 CRLF 与已提交 LF 差异造成，不是依赖内容或测量算法变更；保留双方真实字节哈希，不篡改历史证据。
+
+本轮全量 JS/CSS 原始大小与最近本地记录相同，但部分 JS 文件哈希与压缩估计不同，不宣称所有产物逐字节一致。安装 20 s 与构建 9 s 属于一轮观察，不据此计算缓存收益，不与 Windows 的 Bash 构建计时直接比较。
+
+下一步由用户在该 Frontend Build Check 运行页面使用 Re-run all jobs 重跑，保留相同事件 SHA/ref，暂不提交新改动或合并。观察 Setup Node.js 恢复缓存日志及安装/构建步骤耗时，下载 attempt 2 附件到 github-run-02。重复运行是否命中需要读实际日志，不预先认定。报告原始数据需单独留存，避免覆盖第一轮。
+
+## 第二轮真实 CI 与预算设计（2026-09-16）
+
+用户重跑同一个 run（35051119776，attempt 2），下载文件到 `.perf-results/phase-6-ci/github-run-02/`。上下文与首轮仅 runAttempt 不同；源码提交、PR head/base、release、平台、Node、锁文件、API 配置相同。测量工具与压缩环境字段一致，全部 23 个资源的路径、SHA-256、原始/压缩字节记录逐项一致，摘要可由 JSON 重现。review.json 保存核验与用户日志来源。
+
+| 项目 | attempt 1 | attempt 2 |
+| --- | ---: | ---: |
+| npm 缓存 | 未命中 | 命中 |
+| 安装步骤耗时 | 20 s | 8 s |
+| Nuxt 构建步骤耗时 | 9 s | 9 s |
+| 全量 JS rawBytes | 250399 B | 250399 B |
+| 全量 CSS rawBytes | 22965 B | 22965 B |
+
+第二轮用户日志显示 Cache hit、Cache restored successfully，恢复的 npm 缓存为 66935367 B，缓存 key 为 node-cache-Linux-x64-npm-ae3b026e67f971ce90ef43d5061726e1e3b5236e06d6064c5aeaee1fc0b1e2eb。Node 仍需下载与 npm 缓存恢复是不同层次。已有 npm 缓存配置并非本轮新增优化；这组记录验证其作用边界，不把单次安装少 12 s 写成稳定 60% 提速，也不宣称 Nuxt 编译变快。
+
+报告模式采样后，最初建议以本次两轮同版本 CI 的全量 rawBytes 为起点，分别给 JS/CSS 5% 增长余量并向上取整：JS 262919 B、CSS 24114 B。这是可调整的工程策略，不是测得 5% 随机波动，也不是通用行业标准。两轮一致只支持该版本两次观察稳定，不能保证未来环境无变化。
+
+用户指出小博客未来新增作品页面、加载与动画功能可能合理地超过 5%，因此不采用全量资源增长 5% 就阻断日常 PR 的方案。最终约定：5% 作为初始复查提醒线，warn 模式超线继续通过，strict 模式用于受控的失败验证。分别比较 JS/CSS，避免一项减少抵消另一项增加。
+
+预算覆盖全量客户端产物，不是首页首载、页面时延或构建耗时；不为 CI 的 9 s 设置时间失败线。新增功能确有成本时应评审原因和调整限额，不自动抬高预算。远程失败/恢复验证与 required check 状态仍待完成。
+
+## 预算检查实现与导读（2026-09-16）
+
+用户授权教练实现。按以下顺序阅读：
+
+1. `scripts/build-budget.json`：baseline 是两轮真实 CI 的固定测量值，limits 是向上取整后的初始提醒线。baselineSource 记录来源 run、attempt、提交与环境；它用于追溯，不会自动验证本次构建环境相同。预算范围为全量 JS/CSS 原始字节。
+2. `scripts/check-build-budget.mjs`：读取产物 JSON、预算 JSON 和可选的第三个参数 warn/strict，默认 warn。先检查版本、单位、范围、整数指标，再用 map 分别计算 JS/CSS 相对固定基线的增量和增长率；实际值大于 limit 才超线，等于时通过。
+3. `rows.some(...)`：任一资源超线就需要复查。先向 stdout 输出完整 Markdown，再向 stderr 输出超线提示。GitHub 环境使用 warning/error annotation；普通终端使用文本提示。
+4. `if (exceeded && mode === 'strict') process.exitCode = 1`：只有有效数据超线且采用 strict 才因体积失败。输入缺失、坏 JSON、指标非法、模式拼错由 catch 在两种模式中都返回 1，不能当作“仅提醒”忽略。
+5. `.github/workflows/frontend-build-check.yml`：BUILD_BUDGET_MODE 固定为 warn。先复制本次使用的预算配置到报告目录，再执行检查。用 `|| budget_status=$?` 暂存退出码，写入页面摘要后 `exit "$budget_status"` 恢复失败状态，没有吞掉错误。
+6. Upload 步骤在原资源摘要成功且运行未取消时仍可执行，预算失败不应阻止证据上传。新增 budget.md 与 build-budget.json，连同原来的三份报告留存；若输入校验失败，budget.md 可能为空，错误原因在日志中，不把该次视为完整预算报告。
+
+GitHub 注解格式与步骤条件依据 [workflow commands](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#setting-a-warning-message) 和 [workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsif)。检查失败不等于已设置分支保护；是否禁止合并还取决于仓库 required check 配置。
+
+本地导读命令（项目根目录、Git Bash）：
+
+```bash
+node.exe scripts/check-build-budget.mjs \
+  .perf-results/phase-6-ci/github-run-02/client-assets.json \
+  scripts/build-budget.json warn
+
+node.exe --test scripts/check-build-budget.test.mjs
+```
+
+第一条重读已下载报告，不重新构建；改为 strict 时这份真实报告也应通过，因为两项都未超线。
+
+验证：27 项自动测试通过，覆盖默认模式、等于边界、JS/CSS 单独多 1 B、另一项减少不能抵消超线、缺失/负数/小数/超安全整数指标、坏 JSON、错误版本/单位/范围和拼错模式。测试文件明确使用合成输入，不把它们记为项目体积实测。
+
+另用工作流中的实际 Bash 命令在本地执行四种组合：真实 attempt 2 报告在 warn/strict 均退出 0；明确标记为合成的超线样本在 warn 退出 0、strict 退出 1，均保存了 budget.md 和页面摘要文件内容。YAML 解析与全部 run 块的 Bash 语法检查通过。证据：`.perf-results/phase-6-ci/budget-check-QwzixO/validation.json`，同目录保留输入、结果和源码快照。合成样本只改汇总指标以测试比较逻辑，不作为逐文件一致的测量报告。
+
+本轮未重新构建应用、安装依赖或提交推送；本地未执行 GitHub 上传动作，上传条件仅做静态核对。下一步由用户先阅读，再手动提交并验证日常 PR 报告；随后按计划在临时验证分支使用 strict 和受控阈值验证失败、证据上传及恢复，结束后保留日常 warn 策略。阶段 6 尚未验收完毕。

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "unit": "B",
+  "scope": "all-client-assets-raw",
+  "baselineSource": {
+    "runId": "35051119776",
+    "runAttempts": [1, 2],
+    "checkoutSha": "9f5897b53ed836e8057d49b24945a00a59b8aa00",
+    "node": "v24.18.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "baseline": {
+    "jsRawBytes": 250399,
+    "cssRawBytes": 22965
+  },
+  "limits": {
+    "jsRawBytes": 262919,
+    "cssRawBytes": 24114
+  }
+}
