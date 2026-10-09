@@ -16,3 +16,17 @@ html {
   scrollbar-color: var(--color-primary) var(--color-background);
   scrollbar-gutter: stable;
 }
+
+.toast-enter-from {
+  @apply opacity-0
+}
+
+.toast-enter-active,
+.toast-leave-active,
+.toast-move {
+  @apply transition-all duration-500
+}
+
+.toast-leave-to {
+  @apply opacity-0
+}
