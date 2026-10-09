@@ -36,23 +36,3 @@ onMounted(() => {
 onUnmounted(() => timer?clearInterval(timer):0)
 
 </script>
-
-<style>
-.toast-enter-from {
-  @apply opacity-0
-}
-
-.toast-enter-active,
-.toast-leave-active,
-.toast-move {
-  @apply transition-all duration-500
-}
-
-.toast-leave-to {
-  @apply opacity-0
-}
-
-/* .toast-leave-active {
-  @apply absolute 
-} */
-</style>
