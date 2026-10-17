@@ -1,0 +1,7 @@
+interface:
+  display_name: "文远全栈面试拷打"
+  short_description: "读取当前仓库证据，模拟文远全栈实习项目深挖、追问、评分与复盘"
+  default_prompt: "Use $weride-fullstack-interview to inspect this repository and start a realistic project-focused mock interview in Chinese."
+
+policy:
+  allow_implicit_invocation: true
