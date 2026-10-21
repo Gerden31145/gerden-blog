@@ -1,9 +1,13 @@
 <template>
   <div class="text-text-primary">
     <section class="font-serif">
-      <h1 class="text-5xl tracking-tight">Welcome to Gerden Blog!</h1>
-      <p class="mt-5 text-3xl leading-snug tracking-tight wrap-break-word">
-        Here, I record my daily study notes and ideas about programming, technology, and the web.
+      <div class="aspect-7/2" aria-hidden="true">
+       <LiquidLogo />
+      </div>
+      <!-- <h1 class="text-5xl tracking-tight">Welcome to Gerden Blog!</h1> -->
+       <h1 class="sr-only">Gerden Blog</h1>
+      <p class="text-3xl leading-snug tracking-tight wrap-break-word">
+        Welcome, I record my daily study notes and ideas about programming, technology, and the web.
       </p>
     </section>
 

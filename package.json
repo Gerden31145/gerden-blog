@@ -15,6 +15,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "nuxt": "^4.4.4",
     "pinia": "^3.0.4",
+    "pixi.js": "^8.22.0",
     "tailwindcss": "^4.3.0",
     "vue": "^3.5.33",
     "vue-router": "^5.0.6",

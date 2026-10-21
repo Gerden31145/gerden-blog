@@ -1,5 +1,5 @@
 <template>
-  <div class="font-serif py-3 flex flex-wrap text-text-primary justify-between items-center mb-6
+  <div class="font-serif py-3 flex flex-wrap text-text-primary justify-between items-center mb-3
   sticky z-40 top-0 bg-background
   ">
     <div class="text-3xl">
