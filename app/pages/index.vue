@@ -15,7 +15,7 @@
       <p class="text-sm uppercase tracking-[0.18em] text-primary">About me</p>
       <h2 class="mt-3 text-4xl tracking-tight font-bold mb-5">Hi, I'm Gerden.</h2>
       <div class="w-42 h-52 bg-text-primary float-right overflow-hidden rounded-tr-lg">
-        <img src="../assets/img/蓝调校园志愿者微笑肖像.png">
+        <img src="../assets/img/蓝调校园志愿者微笑肖像.webp" width="600" height="800">
       </div>
       <p class="mt-5 text-2xl leading-8">
         I am a student at GDUFS and a front-end developer currently learning full-stack development.
@@ -33,46 +33,46 @@
       <h2 class="text-4xl tracking-tight font-bold mb-3 mt-8">Outside of coding</h2>
       <div class="card h-52 w-full relative">
         <div class="clipping img8" data-show-index="0">
-          <img src="../assets/img/cutting/8.png">
+          <img src="../assets/img/cutting/8.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img9" data-show-index="1">
-          <img src="../assets/img/cutting/9.png">
+          <img src="../assets/img/cutting/9.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img10">
-          <img src="../assets/img/cutting/10.png">
+          <img src="../assets/img/cutting/10.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img11">
-          <img src="../assets/img/cutting/11.png">
+          <img src="../assets/img/cutting/11.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img12">
-          <img src="../assets/img/cutting/12.png">
+          <img src="../assets/img/cutting/12.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img15">
-          <img src="../assets/img/cutting/15.png">
+          <img src="../assets/img/cutting/15.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img2" style="width: 195px">
-          <img src="../assets/img/cutting/2.png">
+          <img src="../assets/img/cutting/2.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img1">
-          <img src="../assets/img/cutting/1.png">
+          <img src="../assets/img/cutting/1.webp" width="600" height="750" loading="lazy" decoding="async">
         </div>
         <div class="clipping img4">
-          <img src="../assets/img/cutting/4.png">
+          <img src="../assets/img/cutting/4.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img5" style="width: 260px">
-          <img src="../assets/img/cutting/5.png">
+          <img src="../assets/img/cutting/5.webp" width="600" height="450" loading="lazy" decoding="async">
         </div>
         <div class="clipping img7" style="width: 210px">
-          <img src="../assets/img/cutting/7.png">
+          <img src="../assets/img/cutting/7.webp" width="600" height="450" loading="lazy" decoding="async">
         </div>
         <div class="clipping img3">
-          <img src="../assets/img/cutting/3.png">
+          <img src="../assets/img/cutting/3.webp" width="600" height="750" loading="lazy" decoding="async">
         </div>
         <div class="clipping img13">
-          <img src="../assets/img/cutting/13.png">
+          <img src="../assets/img/cutting/13.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
         <div class="clipping img14">
-          <img src="../assets/img/cutting/14.png">
+          <img src="../assets/img/cutting/14.webp" width="600" height="600" loading="lazy" decoding="async">
         </div>
       </div>
       <p class="mt-4 text-2xl leading-8">
@@ -109,6 +109,16 @@ useSeoMeta({
 
 let cardIntersectionObserver : IntersectionObserver | null = null
 let card : HTMLDivElement | null = null
+const timers: number[] = []
+
+async function waitForImage(img:HTMLImageElement) : Promise<boolean> {
+  try {
+    await img.decode()
+    return true
+  } catch {
+    return false
+  }
+}
 
 onMounted(() => {
   const clippings = document.querySelectorAll<HTMLDivElement>(".card .clipping")
@@ -119,22 +129,29 @@ onMounted(() => {
     lerp:0.07
   })
 
-  cardIntersectionObserver = new IntersectionObserver((entries) => {
-    const baseGap = 200
+  cardIntersectionObserver = new IntersectionObserver(async (entries) => {
     for (const entry of entries) {
       if (entry.isIntersecting) {
+        cardIntersectionObserver?.unobserve(entry.target)
+        imgs.forEach(img => {
+          img.loading = 'eager'
+        })
+        const baseGap = 200
+        const tasks = Array.from(imgs)
+        const result = await Promise.all(tasks.map(img => waitForImage(img)))
+        if (!result.every(res => res) || !entry.target.isConnected) return
         clippings.forEach((clipping, index) => {
-          setTimeout(() => {
+          timers.push(window.setTimeout(() => {
             clipping.style.opacity = '1'
-          }, baseGap+index*120)
-          setTimeout(() => {
+          }, baseGap+index*120))
+          timers.push(window.setTimeout(() => {
             clipping.style.border = 'none'
-          }, baseGap+index*160)
+          }, baseGap+index*160))
         })
         imgs.forEach((img, index) => {
-          setTimeout(() => {
+          timers.push(window.setTimeout(() => {
             img.style.opacity = '1'
-          }, baseGap+index*150)
+          }, baseGap+index*150))
         })
       }
     }
@@ -150,6 +167,8 @@ onUnmounted(() => {
   cardIntersectionObserver = null
   lenis?.destroy()
   lenis = null
+  timers.forEach(timer => window.clearTimeout(timer))
+  timers.length = 0
 })
 </script>
 
