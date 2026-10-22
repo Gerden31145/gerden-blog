@@ -98,6 +98,10 @@
 </template>
 
 <script lang="ts" setup>
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
+
+let lenis : Lenis | null = null
 useSeoMeta({
   title:'Gerden Blog - Welcome',
   description:"Gerden's personal blog about frontend development, programming, technology and AI-assisted learning."
@@ -109,6 +113,11 @@ let card : HTMLDivElement | null = null
 onMounted(() => {
   const clippings = document.querySelectorAll<HTMLDivElement>(".card .clipping")
   const imgs = document.querySelectorAll<HTMLImageElement>(".card .clipping img")
+
+  lenis = new Lenis({
+    autoRaf:true,
+    lerp:0.07
+  })
 
   cardIntersectionObserver = new IntersectionObserver((entries) => {
     const baseGap = 200
@@ -139,6 +148,8 @@ onMounted(() => {
 onUnmounted(() => {
   cardIntersectionObserver?.disconnect()
   cardIntersectionObserver = null
+  lenis?.destroy()
+  lenis = null
 })
 </script>
 
