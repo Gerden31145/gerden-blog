@@ -60,7 +60,9 @@ async function openPage(page: Page, path: string) {
 
 test('homepage renders this release and client navigation works', async ({ page }) => {
   await openPage(page, '/')
-  await expect(page.getByRole('heading', { name: 'Welcome to Gerden Blog!', exact: true })).toBeVisible()
+  // The homepage h1 is intentionally sr-only; check its accessible semantics separately.
+  await expect(page.getByRole('heading', { name: 'Gerden Blog', level: 1, exact: true })).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: "Hi, I'm Gerden.", level: 2, exact: true })).toBeVisible()
   await expect(page).toHaveTitle('Gerden Blog - Welcome')
 
   await page.getByRole('button', { name: 'LOGIN', exact: true }).click()

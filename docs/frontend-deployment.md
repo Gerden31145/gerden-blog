@@ -16,7 +16,7 @@
 
 ## 检查顺序
 
-1. 部署前检查 VPS 原有首页的 HTTP 200 和 `Welcome to Gerden Blog!`，不要求匹配新版本。
+1. 部署前检查 VPS 原有首页的 HTTP 200 和 `<title>Gerden Blog - Welcome</title>`，不要求匹配新版本。新旧首页共享这个页面标题，因此首次改版部署也能通过预检查；部署后的本机及公网检查使用同一标题，并继续校验发布版本。
 2. 激活新版本后，在 VPS 请求 `http://127.0.0.1:3000/`，同时检查 HTTP 200、首页标题和本次版本标记。失败会重试，耗尽重试后执行原有回滚。
 3. 本地检查通过后，由 GitHub Actions runner 请求 `https://gerden-shop.cn/`，执行同样的三项检查。
 4. 公网 HTTP 检查通过后，运行 Chromium 浏览器冒烟测试。浏览器检查也通过后才输出最终发布成功。
@@ -42,7 +42,7 @@ Chromium 在部署前安装，避免浏览器依赖安装失败发生在版本�
 
 ```powershell
 npx playwright install chromium
-$env:PLAYWRIGHT_BASE_URL = 'http://127.0.0.1:3000'
+$env:PLAYWRIGHT_BASE_URL = 'http://localhost:3000'
 $env:PLAYWRIGHT_API_BASE = 'http://localhost:8787/api'
 $env:RELEASE_ID = 'local' # 必须与该构建的 BUILD_RELEASE_ID 一致
 npm run test:smoke

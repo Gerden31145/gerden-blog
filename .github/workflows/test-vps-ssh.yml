@@ -100,7 +100,8 @@ jobs:
               exit 1
             fi
 
-            if ! grep -Fq 'Welcome to Gerden Blog!' "$HEALTH_BODY"; then
+            # The page title is shared by the old and redesigned homepage.
+            if ! grep -Fq '<title>Gerden Blog - Welcome</title>' "$HEALTH_BODY"; then
               echo 'Nuxt health check failed: homepage marker missing'
               exit 1
             fi
@@ -200,7 +201,7 @@ jobs:
                   http://127.0.0.1:3000/); then
                   if [ "$HTTP_STATUS" != '200' ]; then
                     echo "Health check $ATTEMPT/10 failed: expected HTTP 200, got $HTTP_STATUS"
-                  elif ! grep -Fq 'Welcome to Gerden Blog!' "$HEALTH_BODY"; then
+                  elif ! grep -Fq '<title>Gerden Blog - Welcome</title>' "$HEALTH_BODY"; then
                     echo "Health check $ATTEMPT/10 failed: homepage marker missing"
                   elif ! grep -Fq "$RELEASE_MARKER" "$HEALTH_BODY"; then
                     echo "Health check $ATTEMPT/10 failed: release marker missing or mismatched (expected $RELEASE_ID)"
@@ -237,7 +238,7 @@ jobs:
           timeout-minutes: 3
           env:
             PUBLIC_URL: https://gerden-shop.cn/
-            HOMEPAGE_MARKER: Welcome to Gerden Blog!
+            HOMEPAGE_MARKER: '<title>Gerden Blog - Welcome</title>'
           run: |
             set -eu
 

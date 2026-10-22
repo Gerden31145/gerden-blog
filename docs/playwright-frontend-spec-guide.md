@@ -76,7 +76,13 @@ await expect(username).toBeVisible()
 test('homepage renders this release and client navigation works', async ({ page }) => {
   await openPage(page, '/')
   await expect(page.getByRole('heading', {
-    name: 'Welcome to Gerden Blog!',
+    name: 'Gerden Blog',
+    level: 1,
+    exact: true,
+  })).toHaveCount(1)
+  await expect(page.getByRole('heading', {
+    name: "Hi, I'm Gerden.",
+    level: 2,
     exact: true,
   })).toBeVisible()
   await expect(page).toHaveTitle('Gerden Blog - Welcome')
@@ -89,9 +95,10 @@ test('homepage renders this release and client navigation works', async ({ page 
 
 `openPage(page, '/')` 是项目自己封装的函数。它打开页面，并检查状态码、发布版本和 Vue 挂载状态，后文会展开。
 
-随后两条断言检查不同位置：
+随后三条断言检查不同内容：
 
-- `getByRole('heading', ...)` 检查页面正文中的标题，例如 `<h1>`。
+- 第一条检查可访问语义中存在一个名为 `Gerden Blog` 的一级标题。当前 `<h1>` 使用 `sr-only`，供辅助技术识别，不承担视觉展示。
+- 第二条检查个人介绍的二级标题可见，验证正文确实展示出来。
 - `toHaveTitle()` 检查 HTML 的 `<title>`，也就是浏览器标签页标题。
 
 然后点击 LOGIN，并检查网址和用户名输入框。
