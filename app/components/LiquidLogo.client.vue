@@ -83,7 +83,7 @@ onMounted(async () => {
       width: host.clientWidth,
       height: host.clientHeight,
       backgroundAlpha: 0,
-      resolution: window.devicePixelRatio,
+      resolution: window.devicePixelRatio * 2,
       autoDensity: true,
       autoStart: false,
       // 此滤镜只有 GLSL 实现；不自动切换到不支持它的渲染器。
@@ -119,6 +119,8 @@ onMounted(async () => {
         },
       },
     });
+
+    // filter.enabled = false
 
     const title = new Text({
       text: 'GERDEN',

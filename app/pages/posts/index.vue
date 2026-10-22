@@ -1,6 +1,6 @@
 <template>
   <div class="text-text-primary">
-    <h1 class="text-5xl font-serif">Posts</h1>
+    <h1 class="text-5xl font-serif font-bold">Posts</h1>
     <p class="text-4xl font-serif mt-4"></p>
     <div v-for="(post) in postList"
     :key="post.id"

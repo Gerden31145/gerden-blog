@@ -12,7 +12,7 @@ void main() {
 
   float phaseShift = sin(uv.x * 12.0 - uTime * 0.3);
 
-  float offsetX = sin(uv.y * 23.0 + uTime * 0.8 + phaseShift) * 2.0;
+  float offsetX = sin(uv.y * 23.0 + uTime * 1.0 + phaseShift) * 2.0;
   float offsetY = sin(uv.x * 36.0 - uTime * 0.5) * 3.0;
 
   uv.x += offsetX * uInputSize.z;
