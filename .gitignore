@@ -28,7 +28,11 @@ logs
 
 /generated/prisma
 
+# Personal notes and interview preparation
 简历.docx
+/吕乐 前端简历.docx
+/.codex/skills/weride-fullstack-interview/
+/docs/weride-mock-interview-review-2026-09-20.md
 问答.md
 总结.md
 Prisma初始化.md
@@ -41,3 +45,6 @@ Nuxt项目的api模块组织.md
 ./worker/.vscode
 
 .perf-results/
+
+# Local Wrangler databases and runtime state
+/worker/.wrangler/
