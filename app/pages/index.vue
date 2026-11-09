@@ -92,7 +92,6 @@
         GitHub / Gerden31145
       </a>
       <div class="mt-3 text-xl font-bold text-text-primary mb-5">Email / 327566107@qq.com</div>
-      <footer class="mt-8 text-md mb-8 text-text-primary font-serif w-full text-center">Copyright © 2026 Gerden. All rights reserved.</footer>
     </section>
   </div>
 </template>
